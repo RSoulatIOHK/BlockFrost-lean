@@ -1,4 +1,4 @@
-# Blockfrost-lean
+# BlockFrost-lean
 
 A Lean library for interacting with the [Blockfrost API](https://blockfrost.io/).
 
