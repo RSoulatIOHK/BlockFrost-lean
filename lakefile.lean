@@ -5,6 +5,8 @@ package «curl-ffi-demo»
 
 lean_lib «CurlFFI»
 
+lean_lib «Blockfrost»
+
 -- Build the C wrapper and link with Homebrew curl
 extern_lib «http_client» pkg := do
   let name   := nameToStaticLib "http_client"

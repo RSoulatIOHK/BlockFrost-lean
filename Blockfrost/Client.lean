@@ -7,12 +7,26 @@ open Lean Curl
 
 namespace Blockfrost
 
+inductive Network where
+  | mainnet
+  | preprod
+  | preview
+  | custom (url : String)
+deriving Inhabited, Repr, FromJson, ToJson
+
+instance : ToString Network where
+  toString
+    | .mainnet  => "mainnet"
+    | .preprod  => "preprod"
+    | .preview  => "preview"
+    | .custom s => s
+
 /-- Supported Cardano network bases (pass a full URL here if you want custom). -/
-def baseOfNetwork : String → String
-  | "mainnet" => "https://cardano-mainnet.blockfrost.io/api/v0"
-  | "preprod" => "https://cardano-preprod.blockfrost.io/api/v0"
-  | "preview" => "https://cardano-preview.blockfrost.io/api/v0"
-  | other     => other  -- allow custom base
+def baseOfNetwork : Network → String
+  | .mainnet  => "https://cardano-mainnet.blockfrost.io/api/v0"
+  | .preprod  => "https://cardano-preprod.blockfrost.io/api/v0"
+  | .preview  => "https://cardano-preview.blockfrost.io/api/v0"
+  | .custom s => s
 
 @[inline] def authHeaders (projectId : String) : Array (String × String) :=
   #[(("project_id"), projectId)]

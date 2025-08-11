@@ -91,6 +91,9 @@ LEAN_EXPORT lean_obj_res lcurl_get(lean_obj_arg url, lean_obj_arg w) {
         return lean_io_result_mk_error(lean_mk_string("out of memory"));
     }
 
+    curl_easy_setopt(h, CURLOPT_FAILONERROR, 1L);  // treat HTTP >=400 as failure
+    curl_easy_setopt(h, CURLOPT_NOSIGNAL,   1L);   // safety on macOS with timeouts/threads
+    curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, ""); // enable decompression
     curl_easy_setopt(h, CURLOPT_URL, c_url);
     curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb);
     curl_easy_setopt(h, CURLOPT_WRITEDATA, &b);
@@ -159,6 +162,9 @@ LEAN_EXPORT lean_obj_res lcurl_get_with_headers(lean_obj_arg url, lean_obj_arg h
         return lean_io_result_mk_error(lean_mk_string("out of memory building headers"));
     }
 
+    curl_easy_setopt(h, CURLOPT_FAILONERROR, 1L);  // treat HTTP >=400 as failure
+    curl_easy_setopt(h, CURLOPT_NOSIGNAL,   1L);   // safety on macOS with timeouts/threads
+    curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, ""); // enable decompression
     curl_easy_setopt(h, CURLOPT_URL, c_url);
     curl_easy_setopt(h, CURLOPT_HTTPHEADER, hdr_list);
     curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb);
@@ -206,4 +212,65 @@ LEAN_EXPORT lean_obj_res lcurl_get_with_headers(lean_obj_arg url, lean_obj_arg h
     if (hdr_list) curl_slist_free_all(hdr_list);
     free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
     return lean_io_result_mk_ok(s);
+}
+
+/* -------- GET with headers -> write raw bytes to a file path -------- */
+/* IO Unit curlGetToFileWithHeaders(String url, Array (String×String) headers, String path) */
+LEAN_EXPORT lean_obj_res lcurl_get_to_file_with_headers(lean_obj_arg url, lean_obj_arg headers, lean_obj_arg path, lean_obj_arg w) {
+    const char* c_url  = lean_string_cstr(url);
+    const char* c_path = lean_string_cstr(path);
+
+    CURLcode cc = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (cc != CURLE_OK)
+        return lean_io_result_mk_error(lean_mk_string(curl_easy_strerror(cc)));
+
+    FILE* f = fopen(c_path, "wb");
+    if (!f) {
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("failed to open output file"));
+    }
+
+    CURL* h = curl_easy_init();
+    if (!h) {
+        fclose(f);
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("curl_easy_init failed"));
+    }
+
+    struct curl_slist* hdr_list = build_headers_from_array(headers);
+    if (headers != lean_box(0) && hdr_list == NULL && lean_array_size(headers) > 0) {
+        curl_easy_cleanup(h); fclose(f); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory building headers"));
+    }
+
+    curl_easy_setopt(h, CURLOPT_URL, c_url);
+    curl_easy_setopt(h, CURLOPT_HTTPHEADER, hdr_list);
+    curl_easy_setopt(h, CURLOPT_WRITEDATA, f);               /* write directly to FILE* */
+    curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, NULL);         /* default fwrite */
+    curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(h, CURLOPT_USERAGENT, "lean-curl/1.0");
+    curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(h, CURLOPT_TIMEOUT, 60L);
+
+    cc = curl_easy_perform(h);
+    if (cc != CURLE_OK) {
+        lean_obj_res err = lean_mk_string(curl_easy_strerror(cc));
+        if (hdr_list) curl_slist_free_all(hdr_list);
+        curl_easy_cleanup(h); fclose(f); curl_global_cleanup();
+        return lean_io_result_mk_error(err);
+    }
+
+    long status = 0;
+    curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
+    if (status < 200 || status >= 300) {
+        if (hdr_list) curl_slist_free_all(hdr_list);
+        curl_easy_cleanup(h); fclose(f); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("HTTP non-2xx when writing file"));
+    }
+
+    if (hdr_list) curl_slist_free_all(hdr_list);
+    curl_easy_cleanup(h);
+    fclose(f);
+    curl_global_cleanup();
+    return lean_io_result_mk_ok(lean_box(0)); /* Unit */
 }

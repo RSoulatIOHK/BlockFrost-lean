@@ -1,12 +1,34 @@
-import CurlFFI.Curl
-import Lean.Data.Json
+import Blockfrost.Env
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Typed
 
-open Curl Lean
+open Blockfrost
+open Blockfrost.BF
+open Blockfrost.Models
 
 def main : IO Unit := do
-  let url := "https://cardano-preprod.blockfrost.io/api/v0/health"
-  let projectId := "preprod4HV6tAVhPllD0qI3ywimrxGuQu9gsclp"
-  let body ← curlGetWithHeaders url #[(("project_id"), projectId)]
-  match Json.parse body with
-  | .ok j => IO.println s!"health: {Json.pretty j}"
-  | .error e => IO.eprintln s!"parse error: {e}"
+  let some pid ← IO.getEnv "BLOCKFROST_PROJECT_ID"
+    | throw <| IO.userError "Set BLOCKFROST_PROJECT_ID"
+  let env : Env := { base := "https://cardano-preprod.blockfrost.io/api/v0", projectId := pid }
+
+  BF.run env do
+    -- root check
+    let r : BFRoot ← Blockfrost.Typed.root
+    IO.println s!"Root: {r}"
+
+    -- health check
+    let h : BFHealth ← Blockfrost.Typed.health
+    IO.println s!"Health: {h}"
+
+    -- health.clock check
+    let c : BFClock ← Blockfrost.Typed.health.clock
+    IO.println s!"Clock: {c}"
+
+   -- metrics
+    let m : Array BFMetrics ← Blockfrost.Typed.metrics
+    IO.println s!"Metrics: {m}"
+
+    -- metrics/endpoints
+    let e : Array BFEndpoints ← Blockfrost.Typed.metrics.endpoints
+    IO.println s!"Endpoints: {e}"
