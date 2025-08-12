@@ -1,5 +1,6 @@
 import Lean.Data.Json
 import Blockfrost.Models.Common
+import Blockfrost.Models.Derive
 
 namespace Blockfrost
 
@@ -8,8 +9,7 @@ structure BFAssetList where
   quantity : String
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFAssetList where
-  toString (a : BFAssetList) := s!"{a.asset} ({a.quantity})"
+instance : PrettyToString BFAssetList where
 
 /-- GET /assets/{asset} -/
 structure BFAssetInfo where
@@ -26,7 +26,6 @@ structure BFAssetInfo where
   metadata : Option Lean.Json -- TODO: define a proper type
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFAssetInfo where
-  toString (a : BFAssetInfo) :=
-    s!"{a.asset} ({a.quantity}) with policy {a.policy_id} and name {a.asset_name} (fingerprint: {a.fingerprint})"
+instance : PrettyToString BFAssetInfo where
+
 end Blockfrost

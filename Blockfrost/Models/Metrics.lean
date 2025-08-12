@@ -1,5 +1,8 @@
 import Lean.Data.Json
 import Blockfrost.Utils
+import Blockfrost.Models.Derive
+
+
 open Blockfrost.Utils
 
 namespace Blockfrost
@@ -10,9 +13,7 @@ structure BFMetrics where
   calls : Nat
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFMetrics where
-  toString m :=
-    s!"{m.calls} call{plural m.calls} @ {m.time}s (unix)"
+instance : PrettyToString BFMetrics where
 
 -- GET /metrics/endpoints
 structure BFEndpoints where
@@ -21,7 +22,6 @@ structure BFEndpoints where
   endpoint : String
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFEndpoints where
-  toString e :=
-    s!"{e.calls} call{plural e.calls} @ {e.time}s (unix) for endpoint {e.endpoint}"
+instance : PrettyToString BFEndpoints where
+
 end Blockfrost

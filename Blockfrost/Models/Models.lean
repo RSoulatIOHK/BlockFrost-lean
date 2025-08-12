@@ -11,6 +11,9 @@ import Blockfrost.Models.Metrics
 import Blockfrost.Models.Root
 import Blockfrost.Models.Txs
 
+import Blockfrost.Models.Derive
+
+
 namespace Blockfrost.Models
 
 -- API Error
@@ -20,7 +23,5 @@ structure BFApiError where
   message     : String
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFApiError where
-  toString (e : BFApiError) :=
-    s!"API Error: {e.status_code} - {e.error} - {e.message}"
+instance : PrettyToString BFApiError where
 end Blockfrost.Models

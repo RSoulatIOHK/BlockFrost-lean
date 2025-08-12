@@ -1,4 +1,5 @@
 import Lean.Data.Json
+import Blockfrost.Models.Derive
 
 namespace Blockfrost
 
@@ -8,7 +9,7 @@ structure BFRoot where
   version : String
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFRoot where
-  toString (r : BFRoot) := s!"{r.url} (version {r.version})"
+instance : PrettyToString BFRoot where
+
 
 end Blockfrost

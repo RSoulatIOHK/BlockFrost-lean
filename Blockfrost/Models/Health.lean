@@ -1,4 +1,5 @@
 import Lean.Data.Json
+import Blockfrost.Models.Derive
 
 namespace Blockfrost.Models
 
@@ -8,23 +9,20 @@ structure BFRoot where
   version : String
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFRoot where
-  toString (r : BFRoot) := s!"{r.url} (version: {r.version})"
+instance : PrettyToString BFRoot where
 
 -- GET /health
 structure BFHealth where
   is_healthy : Bool
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFHealth where
-  toString (h : BFHealth) := if h.is_healthy then "true" else "false"
+instance : PrettyToString BFHealth where
 
 -- Get /health/clock
 structure BFClock where
   server_time : Nat
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFClock where
-  toString (c : BFClock) := s!"{c.server_time} (UNIX timestamp)"
+instance : PrettyToString BFClock where
 
 end Blockfrost.Models

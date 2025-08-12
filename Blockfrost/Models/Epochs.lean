@@ -1,6 +1,7 @@
 import Lean.Data.Json
 import Lean.Data.Json.FromToJson
 import Blockfrost.Models.Common
+import Blockfrost.Models.Derive
 
 namespace Blockfrost
 -- This should probably be in Common
@@ -20,12 +21,7 @@ structure BFEpoch where
   active_stake?    : Option String := none
 deriving Repr, Lean.FromJson
 
-instance : ToString BFEpoch where
-  toString e :=
-    s!"Epoch {e.epoch} [{e.start_time} – {e.end_time}] "
-    ++ s!"blocks={e.block_count} txs={e.tx_count} "
-    ++ s!"output={e.output} fees={e.fees}"
-    ++ (opt " active_stake=" e.active_stake?)
+instance : PrettyToString BFEpoch where
 
 /-- Cost models are language→cost-table maps; until you need a typed table,
 treat them as JSON blobs. -/
@@ -35,6 +31,8 @@ structure BFCostModels where
   plutus_v2? : Option Lean.Json := none
   plutus_v3? : Option Lean.Json := none
 deriving Repr, Lean.FromJson
+
+instance : PrettyToString BFCostModels where
 
 structure BFEpochParameters where
   epoch        : Int
@@ -97,13 +95,13 @@ structure BFEpochParameters where
   min_fee_ref_script_cost_per_byte : Option Nat := none
 deriving Lean.FromJson -- Repr
 
+instance : PrettyToString BFEpochParameters where
+
 structure BFEpochStake where
   stake_address : String
   amount        : String
   pool_id?      : Option String := none
 deriving Repr, Lean.FromJson
 
-instance : ToString BFEpochStake where
-  toString (s : BFEpochStake) := s!"{s.stake_address} {s.amount} (pool: {s.pool_id?})"
-
+instance : PrettyToString BFEpochStake where
 end Blockfrost

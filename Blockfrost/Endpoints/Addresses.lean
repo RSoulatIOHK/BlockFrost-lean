@@ -22,11 +22,13 @@ namespace addresses
 
   namespace utxos
     -- GET /addresses/{address}/utxos/assets
-    @[inline] def assets (addr : String) : Path :=
-      byAddress addr |>.seg "utxos" |>.seg "assets"
+    @[inline] def byAsset (addr : String) (asset : String) : Path :=
+      byAddress addr |>.seg "utxos" |>.seg asset
   end utxos
 
   -- GET /addresses/{address}/txs (deprecated)
+  @[inline] def txs (addr : String) : Path :=
+    byAddress addr |>.seg "txs"
 
   -- GET /addresses/{address}/transactions
   @[inline] def transactions (addr : String) : Path :=

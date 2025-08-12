@@ -87,39 +87,38 @@ def main : IO Unit := do
 
       -- ADDRESSES
       let addressForTest := "addr1qxqs59lphg8g6qndelq8xwqn60ag3aeyfcp33c2kdp46a09re5df3pzwwmyq946axfcejy5n4x0y99wqpgtp2gd0k09qsgy6pz"
+      let assetForTest := "b863bc7369f46136ac1048adb2fa7dae3af944c3bbb2be2f216a8d4f426572727953616765"
 
       IO.println "GET /addresses/{address}"
       let address ← Blockfrost.Typed.addresses.byAddress addressForTest
       IO.println address
 
-      -- IO.println "GET /addresses/{address}/extended"
-      -- let extendedInfoAddress ← Blockfrost.Typed.addresses.extended addressForTest
-      -- IO.println extendedInfoAddress
+      IO.println "GET /addresses/{address}/extended"
+      let extendedInfoAddress ← Blockfrost.Typed.addresses.extended addressForTest
+      IO.println extendedInfoAddress
 
-      -- IO.println "GET /addresses/{address}/total"
-      -- let totalAddress ← Blockfrost.Typed.addresses.total addressForTest
-      -- IO.println totalAddress
+      IO.println "GET /addresses/{address}/total"
+      let totalAddress ← Blockfrost.Typed.addresses.total addressForTest
+      IO.println totalAddress
 
       IO.println "GET /addresses/{address}/utxos"
       let utxos ← Blockfrost.Typed.addresses.utxos addressForTest
       IO.println utxos
 
-      -- IO.println "GET /addresses/{address}/utxos/{asset}"
-      -- let utxoAsset ← Blockfrost.Typed.addresses.utxoAsset addressForTest
-      -- IO.println utxoAsset
+      IO.println "GET /addresses/{address}/utxos/{asset}"
+      let utxoAsset ← Blockfrost.Typed.addresses.utxos.byAsset addressForTest assetForTest
+      IO.println utxoAsset
 
       -- DEPRECATED GET /addresses/{address}/txs
 
-      -- IO.println "GET /addresses/{address}/transactions"
-      -- let transactions ← Blockfrost.Typed.addresses.transactions addressForTest
-      -- IO.println transactions
+      IO.println "GET /addresses/{address}/transactions"
+      let transactions ← Blockfrost.Typed.addresses.transactions addressForTest
+      IO.println transactions
 
       -- ASSETS
       IO.println "GET /assets"
       let assets ← Blockfrost.Typed.assets
       IO.println assets
-
-      let assetForTest := "b863bc7369f46136ac1048adb2fa7dae3af944c3bbb2be2f216a8d4f426572727952756279"
 
       IO.println "GET /assets/{asset}"
       let assetInfo ← Blockfrost.Typed.assets.byAsset assetForTest
@@ -128,3 +127,17 @@ def main : IO Unit := do
       -- IO.println "GET /assets/{asset}/history"
       -- let assetHistory ← Blockfrost.Typed.assets.history assetForTest
       -- IO.println assetHistory
+
+      -- DEPRECATED GET /assets/{asset}/txs
+
+      -- IO.println "GET /assets/{asset}/transactions"
+      -- let assetTransactions ← Blockfrost.Typed.assets.transactions assetForTest
+      -- IO.println assetTransactions
+
+      -- IO.println "GET /assets/{asset}/addresses"
+      -- let assetAddresses ← Blockfrost.Typed.assets.addresses assetForTest
+      -- IO.println assetAddresses
+
+      -- IO.println "GET /assets/{asset}/{policy_id}"
+      -- let assetPolicyId ← Blockfrost.Typed.assets.policyId assetForTest
+      -- IO.println assetPolicyId

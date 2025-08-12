@@ -1,4 +1,5 @@
 import Lean.Data.Json
+import Blockfrost.Models.Derive
 
 namespace Blockfrost
 
@@ -33,6 +34,6 @@ structure BFTx where
   valid_contract : Int
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFTx where
-  toString (tx : BFTx) := s!"{tx.hash} (block: {tx.block}, slot: {tx.slot}, size: {tx.size})"
+instance : PrettyToString BFTx where
+
 end Blockfrost

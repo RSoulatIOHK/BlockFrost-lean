@@ -1,5 +1,6 @@
 import Lean.Data.Json
 import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Derive
 
 namespace Blockfrost
 
@@ -8,8 +9,8 @@ structure BFMempool where
   tx_hash : String
 deriving Repr, Lean.FromJson, Lean.ToJson
 
-instance : ToString BFMempool where
-  toString (m : BFMempool) := s!"{m.tx_hash}"
+instance : PrettyToString BFMempool where
+
 
 
 end Blockfrost
