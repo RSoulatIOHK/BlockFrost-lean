@@ -8,9 +8,23 @@ This library provides a typed interface to the Blockfrost API, making it easy to
 
 Currently, the following API sections are implemented:
 
-*   **Health**: Check the backend health status.
-*   **Metrics**: View historical usage metrics.
-*   **Root**: Access basic API information.
+- [x]   **Health**
+- [x]   **Metrics**
+- [x]   **Root**
+- [x]   **Accounts**
+- [x]   **Addresses**
+- [x]   **Assets**
+- [x]   **Blocks**
+- [x]   **Epochs**
+- [x]   **Ledger**
+- [x]   **Mempool**
+- [x]   **Metadata**
+- [x]   **Network**
+- [x]   **Pools**
+- [x]   **Scripts**
+- [x]   **Transactions**
+
+Except the POST methods, which are not yet implemented.
 
 ## Missing Features & Contributing
 
@@ -18,18 +32,7 @@ This library is still under development, and many features of the Blockfrost API
 
 If you are interested in contributing, please feel free to open a pull request. Some of the missing features include:
 
-*   Accounts
-*   Addresses
-*   Assets
-*   Blocks
-*   Epochs
-*   Ledger
-*   Mempool
-*   Metadata
-*   Network
-*   Pools
-*   Scripts
-*   Transactions
 *   Cardano Utilities
+*   Generation of everything from the OpenAPI spec
 
 Your contributions are greatly appreciated!
