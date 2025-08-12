@@ -8,6 +8,7 @@ namespace Blockfrost
   namespace assets
     -- GET /assets/{asset}
     @[inline] def byAsset (h : String) : Path := assets.seg h
+
     -- GET /assets/{asset}/history
     @[inline] def history (h : String) : Path := byAsset h |>.seg "history"
     -- GET /assets/{asset}/txs (deprecated)

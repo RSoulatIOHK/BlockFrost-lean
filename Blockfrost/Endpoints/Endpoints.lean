@@ -12,5 +12,8 @@ import Blockfrost.Endpoints.Ledger
 import Blockfrost.Endpoints.Mempool
 import Blockfrost.Endpoints.Metadata
 import Blockfrost.Endpoints.Metrics
+import Blockfrost.Endpoints.Network
+import Blockfrost.Endpoints.Pools
 import Blockfrost.Endpoints.Root
-import Blockfrost.Endpoints.Txs
+import Blockfrost.Endpoints.Scripts
+import Blockfrost.Endpoints.Transactions
