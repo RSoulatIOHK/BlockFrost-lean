@@ -33,7 +33,7 @@ structure BFTx where
   pool_retire_count : Int
   asset_mint_or_burn_count : Int
   redeemer_count : Int
-  valid_contract : Int
+  valid_contract : Bool
 deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFTx where
 

@@ -24,10 +24,10 @@ structure BFPoolExtended where
   hex : String
   active_stake : String
   live_stake : String
-  live_saturation : Nat
+  live_saturation : Float
   blocks_minted : Int
   declared_pledge : String
-  margin_cost : Nat
+  margin_cost : Float
   fixed_cost : String
   metadata : BFPoolMetadata
 deriving Repr, Lean.FromJson, Lean.ToJson
@@ -59,14 +59,14 @@ structure BFPoolInfo where
   blocks_minted : Int
   blocks_epoch : Int
   live_stake : String
-  live_size : Nat
-  live_saturation : Nat
+  live_size : Float
+  live_saturation : Float
   live_delegators : Nat
   active_stake : String
-  active_size : Nat
+  active_size : Float
   declared_pledge : String
   live_pledge : String
-  margin_cost : Nat
+  margin_cost : Float
   fixed_cost : String
   reward_account : String
   owners : List String
@@ -81,7 +81,7 @@ structure BFPoolHistory where
   epoch : Int
   blocks : Int
   active_stake : String
-  active_size : String
+  active_size : Float
   delegators_count : Int
   rewards : String
   fees : String
@@ -100,6 +100,7 @@ structure BFPoolRelay where
   dns_srv? : Option String := none
   port : Int
 deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolRelay where
 
 -- GET /pools/{pool_id}/delegators
 structure BFPoolDelegator where

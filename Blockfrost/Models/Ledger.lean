@@ -6,7 +6,7 @@ import Blockfrost.Models.Derive
 namespace Blockfrost
 -- GET /genesis
 structure BFGenesis where
-  active_slots_coefficient : Nat
+  active_slots_coefficient : Float
   update_quorum : Int
   max_lovelace_supply : String
   network_magic : Int

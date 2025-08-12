@@ -23,12 +23,12 @@ namespace epochs
     Blockfrost.epochs.byEpoch epoch |>.getJsonM (α := BFEpoch)
 
   -- GET /epochs/{epoch}/next
-  def next (epoch : Nat) : BF (Except BFApiError BFEpoch) :=
-    Blockfrost.epochs.next epoch |>.getJsonM (α := BFEpoch)
+  def next (epoch : Nat) : BF (Except BFApiError (List BFEpoch)) :=
+    Blockfrost.epochs.next epoch |>.getJsonM (α := List BFEpoch)
 
   -- GET /epochs/{epoch}/previous
-  def previous (epoch : Nat) : BF (Except BFApiError BFEpoch) :=
-    Blockfrost.epochs.previous epoch |>.getJsonM (α := BFEpoch)
+  def previous (epoch : Nat) : BF (Except BFApiError (List BFEpoch)) :=
+    Blockfrost.epochs.previous epoch |>.getJsonM (α := List BFEpoch)
 
   -- GET /epochs/{epoch}/stakes
   def stakes (epoch : Nat) : BF (Except BFApiError (List BFEpochStake)) :=
@@ -36,8 +36,8 @@ namespace epochs
 
   namespace stakes
     -- GET /epochs/{epoch}/stakes/{pool_id}
-    def byPool (epoch : Nat) (poolId : String) : BF (Except BFApiError BFEpochStake) :=
-      Blockfrost.epochs.stakes.byPool epoch poolId |>.getJsonM (α := BFEpochStake)
+    def byPool (epoch : Nat) (poolId : String) : BF (Except BFApiError (List BFEpochStakeAmount)) :=
+      Blockfrost.epochs.stakes.byPool epoch poolId |>.getJsonM (α := List BFEpochStakeAmount)
   end stakes
 
   -- GET /epochs/{epoch}/blocks

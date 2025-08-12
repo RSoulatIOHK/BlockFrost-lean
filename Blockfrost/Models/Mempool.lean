@@ -39,14 +39,14 @@ structure BFMempoolTx where
 deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFMempoolTx where
 
-structure BFMempoolUtxo where
+structure BFMempoolInput where
   address : String
   tx_hash : String
   output_index : Int
   collateral : Bool
   reference : Bool
 deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFMempoolUtxo where
+instance : PrettyToString BFMempoolInput where
 
 structure BFMempoolOutput where
   address : String
@@ -69,11 +69,10 @@ instance : PrettyToString BFMempoolRedeemer where
 
 structure BFMempoolTxInfo where
   tx : BFMempoolTx
-  inputs : List BFMempoolUtxo
+  inputs : List BFMempoolInput
   outputs : List BFMempoolOutput
-  redeemers : List BFMempoolRedeemer
+  redeemers? : Option (List BFMempoolRedeemer) := none
 deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFMempoolTxInfo where
 
---
 end Blockfrost

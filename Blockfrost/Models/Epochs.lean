@@ -16,8 +16,7 @@ structure BFEpoch where
   output           : String
   fees             : String
   active_stake?    : Option String := none
-deriving Repr, Lean.FromJson
-
+deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFEpoch where
 
 /-- Cost models are language→cost-table maps; until you need a typed table,
@@ -43,9 +42,10 @@ structure BFEpochParameters where
   pool_deposit : String
   e_max        : Int
   n_opt        : Int
-  a0           : Nat
-  rho          : Nat
-  decentralisation_param : Nat
+  a0           : Float
+  rho          : Float
+  tau          : Float
+  decentralisation_param : Float
   extra_entropy : Option String := none
   protocol_major_ver : Int
   protocol_minor_ver : Int
@@ -56,8 +56,8 @@ structure BFEpochParameters where
   nonce : String
   cost_models : BFCostModels
   cost_models_raw : Lean.Json
-  price_mem : Option Nat := none
-  price_step : Option Nat := none
+  price_mem : Option Float := none
+  price_step : Option Float := none
   max_tx_ex_mem : Option String := none
   max_tx_ex_steps : Option String := none
   max_block_ex_mem : Option String := none
@@ -69,19 +69,19 @@ structure BFEpochParameters where
 
   coins_per_utxo_word? : Option String := none -- (deprecated)
 
-  pvt_motion_no_confidence : Option Nat := none
-  pvt_committee_normal : Option Nat := none
-  pvt_committee_no_confidence : Option Nat := none
-  pvt_hard_fork_initiation : Option Nat := none
-  dvt_committee_normal : Option Nat := none
-  dvt_committee_no_confidence : Option Nat := none
-  dvt_update_to_constitution : Option Nat := none
-  dvt_hard_fork_initiation : Option Nat := none
-  dvt_p_p_network_group : Option Nat := none
-  dvt_p_p_economic_group : Option Nat := none
-  dvt_p_p_technical_group : Option Nat := none
-  dvt_p_p_gov_group : Option Nat := none
-  dvt_treasury_withdrawal : Option Nat := none
+  pvt_motion_no_confidence : Option Float := none
+  pvt_committee_normal : Option Float := none
+  pvt_committee_no_confidence : Option Float := none
+  pvt_hard_fork_initiation : Option Float := none
+  dvt_committee_normal : Option Float := none
+  dvt_committee_no_confidence : Option Float := none
+  dvt_update_to_constitution : Option Float := none
+  dvt_hard_fork_initiation : Option Float := none
+  dvt_p_p_network_group : Option Float := none
+  dvt_p_p_economic_group : Option Float := none
+  dvt_p_p_technical_group : Option Float := none
+  dvt_p_p_gov_group : Option Float := none
+  dvt_treasury_withdrawal : Option Float := none
   committee_min_size : Option String := none
   committee_max_term_length : Option String := none
   gov_action_lifetime : Option String := none
@@ -89,8 +89,8 @@ structure BFEpochParameters where
   drep_deposit : Option String := none
   drep_activity : Option String := none
   -- pvt_pp_security_group : Nat -- DEPRECATED := none
-  pvt_p_p_security_group : Option Nat := none
-  min_fee_ref_script_cost_per_byte : Option Nat := none
+  pvt_p_p_security_group : Option Float := none
+  min_fee_ref_script_cost_per_byte : Option Float := none
 deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFEpochParameters where
 
@@ -99,11 +99,15 @@ structure BFEpochStake where
   stake_address : String
   pool_id       : String
   amount        : String
-deriving Repr, Lean.FromJson
+deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFEpochStake where
 
 -- GET /epochs/{number}/stakes/{pool_id} /epochs/{number}/blocks(/{pool_id})
-abbrev BFEpochStakePool := String
+structure BFEpochStakeAmount where
+  stake_address : String
+  amount       : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFEpochStakeAmount where
 
 -- GET /epochs/{number}/blocks
 abbrev BFEpochBlock := String

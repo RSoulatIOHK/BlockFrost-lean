@@ -15,8 +15,8 @@ namespace blocks
 
   namespace latest
     -- GET /blocks/latest/txs
-    def txs : BF (Except BFApiError (List BFTransaction)) :=
-      Blockfrost.blocks.latest.txs.getJsonM (α := List BFTransaction)
+    def txs : BF (Except BFApiError (List BFBlockTxs)) :=
+      Blockfrost.blocks.latest.txs.getJsonM (α := List BFBlockTxs)
 
     namespace txs
       -- GET /blocks/latest/txs/cbor
@@ -30,12 +30,12 @@ namespace blocks
     Blockfrost.blocks.byHash id |>.getJsonM (α := BFBlock)
 
   -- GET /blocks/{hash_or_number}/next
-  def next (id : String) : BF (Except BFApiError BFBlock) :=
-    Blockfrost.blocks.next id |>.getJsonM (α := BFBlock)
+  def next (id : String) : BF (Except BFApiError (List BFBlock)) :=
+    Blockfrost.blocks.next id |>.getJsonM (α := List BFBlock)
 
   -- GET /blocks/{hash_or_number}/previous
-  def previous (id : String) : BF (Except BFApiError BFBlock) :=
-    Blockfrost.blocks.previous id |>.getJsonM (α := BFBlock)
+  def previous (id : String) : BF (Except BFApiError (List BFBlock)) :=
+    Blockfrost.blocks.previous id |>.getJsonM (α := List BFBlock)
 
   namespace slot
     -- GET /blocks/slot/{slot_number}
@@ -50,13 +50,13 @@ namespace blocks
   end epoch
 
   -- GET /blocks/{hash_or_number}/txs
-  def txs (id : String) : BF (Except BFApiError (List BFTransaction)) :=
-    Blockfrost.blocks.txs id |>.getJsonM (α := List BFTransaction)
+  def txs (id : String) : BF (Except BFApiError (List BFBlockTxs)) :=
+    Blockfrost.blocks.txs id |>.getJsonM (α := List BFBlockTxs)
 
   namespace txs
     -- GET /blocks/{hash_or_number}/txs/cbor
-    def cbor (id : String) : BF (Except BFApiError BFBlockTxsCBOR) :=
-      Blockfrost.blocks.txs.cbor id |>.getJsonM (α := BFBlockTxsCBOR)
+    def cbor (id : String) : BF (Except BFApiError (List BFBlockTxsCBOR)) :=
+      Blockfrost.blocks.txs.cbor id |>.getJsonM (α := List BFBlockTxsCBOR)
   end txs
 
   -- GET /blocks/{hash_or_number}/addresses

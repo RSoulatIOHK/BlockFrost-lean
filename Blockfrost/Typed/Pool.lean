@@ -38,24 +38,24 @@ namespace pools
     Blockfrost.pools.metadata poolId |>.getJsonM (α := BFPoolMetadata)
 
   -- GET /pools/{pool_id}/relays
-  def relays (poolId : String) : BF (Except BFApiError (Array BFPoolRelay)) :=
-    Blockfrost.pools.relays poolId |>.getJsonM (α := Array BFPoolRelay)
+  def relays (poolId : String) : BF (Except BFApiError (List BFPoolRelay)) :=
+    Blockfrost.pools.relays poolId |>.getJsonM (α := List BFPoolRelay)
 
   -- GET /pools/{pool_id}/delegators
-  def delegators (poolId : String) : BF (Except BFApiError (Array BFPoolDelegator)) :=
-    Blockfrost.pools.delegators poolId |>.getJsonM (α := Array BFPoolDelegator)
+  def delegators (poolId : String) : BF (Except BFApiError (List BFPoolDelegator)) :=
+    Blockfrost.pools.delegators poolId |>.getJsonM (α := List BFPoolDelegator)
 
   -- GET /pools/{pool_id}/blocks
-  def blocks (poolId : String) : BF (Except BFApiError (Array BFPoolBlock)) :=
-    Blockfrost.pools.blocks poolId |>.getJsonM (α := Array BFPoolBlock)
+  def blocks (poolId : String) : BF (Except BFApiError (List BFPoolBlock)) :=
+    Blockfrost.pools.blocks poolId |>.getJsonM (α := List BFPoolBlock)
 
   -- GET /pools/{pool_id}/updates
-  def updates (poolId : String) : BF (Except BFApiError (Array BFPoolUpdate)) :=
-    Blockfrost.pools.updates poolId |>.getJsonM (α := Array BFPoolUpdate)
+  def updates (poolId : String) : BF (Except BFApiError (List BFPoolUpdate)) :=
+    Blockfrost.pools.updates poolId |>.getJsonM (α := List BFPoolUpdate)
 
   -- GET /pools/{pool_id}/votes
-  def votes (poolId : String) : BF (Except BFApiError (Array BFPoolVote)) :=
-    Blockfrost.pools.votes poolId |>.getJsonM (α := Array BFPoolVote)
+  def votes (poolId : String) : BF (Except BFApiError (List BFPoolVote)) :=
+    Blockfrost.pools.votes poolId |>.getJsonM (α := List BFPoolVote)
 end pools
 
 end Blockfrost.Typed

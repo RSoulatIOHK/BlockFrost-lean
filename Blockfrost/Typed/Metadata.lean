@@ -16,12 +16,12 @@ namespace metadata
 
     namespace labels
       -- GET /metadata/txs/labels/{label}
-      def byLabel (label : String) : BF (Except BFApiError BFMetadataTxsLabels) :=
-        Blockfrost.metadata.txs.labels.byLabel label |>.getJsonM (α := BFMetadataTxsLabels)
+      def byLabel (label : String) : BF (Except BFApiError (List BFMetadataTxsLabelsDetail)) :=
+        Blockfrost.metadata.txs.labels.byLabel label |>.getJsonM (α := List BFMetadataTxsLabelsDetail)
 
       -- GET /metadata/txs/labels/{label}/cbor
-      def cbor (label : String) : BF (Except BFApiError BFMetadataTxsLabelsCbor) :=
-        Blockfrost.metadata.txs.labels.cbor label |>.getJsonM (α := BFMetadataTxsLabelsCbor)
+      def cbor (label : String) : BF (Except BFApiError (List BFMetadataTxsLabelsCbor)) :=
+        Blockfrost.metadata.txs.labels.cbor label |>.getJsonM (α := List BFMetadataTxsLabelsCbor)
     end labels
   end txs
 end metadata

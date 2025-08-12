@@ -14,36 +14,36 @@ namespace txs
     Blockfrost.txs.byHash h |>.getJsonM (α := BFTx)
 
   -- GET /txs/{hash}/utxos
-  def utxos (h : String) : BF (Except BFApiError (Array BFTxUtxo)) :=
-    Blockfrost.txs.utxos h |>.getJsonM (α := Array BFTxUtxo)
+  def utxos (h : String) : BF (Except BFApiError (BFTxUtxo)) :=
+    Blockfrost.txs.utxos h |>.getJsonM (α := BFTxUtxo)
 
   -- GET /txs/{hash}/stakes
-  def stakes (h : String) : BF (Except BFApiError (Array BFTxStake)) :=
-    Blockfrost.txs.stakes h |>.getJsonM (α := Array BFTxStake)
+  def stakes (h : String) : BF (Except BFApiError (List BFTxStake)) :=
+    Blockfrost.txs.stakes h |>.getJsonM (α := List BFTxStake)
 
   -- GET /txs/{hash}/delegations
-  def delegations (h : String) : BF (Except BFApiError (Array BFTxDelegation)) :=
-    Blockfrost.txs.delegations h |>.getJsonM (α := Array BFTxDelegation)
+  def delegations (h : String) : BF (Except BFApiError (List BFTxDelegation)) :=
+    Blockfrost.txs.delegations h |>.getJsonM (α := List BFTxDelegation)
 
   -- GET /txs/{hash}/withdrawals
-  def withdrawals (h : String) : BF (Except BFApiError (Array BFTxWithdrawal)) :=
-    Blockfrost.txs.withdrawals h |>.getJsonM (α := Array BFTxWithdrawal)
+  def withdrawals (h : String) : BF (Except BFApiError (List BFTxWithdrawal)) :=
+    Blockfrost.txs.withdrawals h |>.getJsonM (α := List BFTxWithdrawal)
 
   -- GET /txs/{hash}/mirs
-  def mirs (h : String) : BF (Except BFApiError (Array BFTxMir)) :=
-    Blockfrost.txs.mirs h |>.getJsonM (α := Array BFTxMir)
+  def mirs (h : String) : BF (Except BFApiError (List BFTxMir)) :=
+    Blockfrost.txs.mirs h |>.getJsonM (α := List BFTxMir)
 
   -- GET /txs/{hash}/pool_updates
-  def poolUpdates (h : String) : BF (Except BFApiError (Array BFTxPoolUpdate)) :=
-    Blockfrost.txs.poolUpdates h |>.getJsonM (α := Array BFTxPoolUpdate)
+  def poolUpdates (h : String) : BF (Except BFApiError (List BFTxPoolUpdate)) :=
+    Blockfrost.txs.poolUpdates h |>.getJsonM (α := List BFTxPoolUpdate)
 
   -- GET /txs/{hash}/pool_retires
-  def poolRetires (h : String) : BF (Except BFApiError (Array BFTxPoolRetire)) :=
-    Blockfrost.txs.poolRetires h |>.getJsonM (α := Array BFTxPoolRetire)
+  def poolRetires (h : String) : BF (Except BFApiError (List BFTxPoolRetire)) :=
+    Blockfrost.txs.poolRetires h |>.getJsonM (α := List BFTxPoolRetire)
 
   -- GET /txs/{hash}/metadata
-  def metadata (h : String) : BF (Except BFApiError (Array BFTxMetadata)) :=
-    Blockfrost.txs.metadata h |>.getJsonM (α := Array BFTxMetadata)
+  def metadata (h : String) : BF (Except BFApiError (List BFTxMetadata)) :=
+    Blockfrost.txs.metadata h |>.getJsonM (α := List BFTxMetadata)
 
   namespace metadata
     -- GET /txs/{hash}/metadata/cbor
@@ -52,12 +52,12 @@ namespace txs
   end metadata
 
   -- GET /txs/{hash}/redeemers
-  def redeemers (h : String) : BF (Except BFApiError (Array BFTxRedeemer)) :=
-    Blockfrost.txs.redeemers h |>.getJsonM (α := Array BFTxRedeemer)
+  def redeemers (h : String) : BF (Except BFApiError (List BFTxRedeemer)) :=
+    Blockfrost.txs.redeemers h |>.getJsonM (α := List BFTxRedeemer)
 
   -- GET /txs/{hash}/required_signers
-  def requiredSigners (h : String) : BF (Except BFApiError (Array BFTxRequiredSigner)) :=
-    Blockfrost.txs.requiredSigners h |>.getJsonM (α := Array BFTxRequiredSigner)
+  def requiredSigners (h : String) : BF (Except BFApiError (List BFTxRequiredSigner)) :=
+    Blockfrost.txs.requiredSigners h |>.getJsonM (α := List BFTxRequiredSigner)
 
   -- GET /txs/{hash}/cbor
   def cbor (h : String) : BF (Except BFApiError BFTxCbor) :=

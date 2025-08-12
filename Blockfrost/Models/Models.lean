@@ -29,6 +29,6 @@ structure BFApiError where
   error       : String
   message     : String
 deriving Repr, Lean.FromJson, Lean.ToJson
-
 instance : PrettyToString BFApiError where
+
 end Blockfrost.Models
