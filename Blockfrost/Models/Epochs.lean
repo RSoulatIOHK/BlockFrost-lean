@@ -4,10 +4,7 @@ import Blockfrost.Models.Common
 import Blockfrost.Models.Derive
 
 namespace Blockfrost
--- This should probably be in Common
-private def opt (pfx : String) (o : Option String) : String :=
-  match o with | some x => s!"{pfx}{x}" | none => ""
----
+/-- GET /epochs/latest, /epochs/{epoch}(/next, /previous) -/
 structure BFEpoch where
   epoch            : Nat
   start_time       : Nat
@@ -30,10 +27,11 @@ structure BFCostModels where
   plutus_v1? : Option Lean.Json := none
   plutus_v2? : Option Lean.Json := none
   plutus_v3? : Option Lean.Json := none
-deriving Repr, Lean.FromJson
+deriving Repr, Lean.FromJson, Lean.ToJson
 
 instance : PrettyToString BFCostModels where
 
+-- GET /epochs/latest/parameters, /epochs/{epoch}/parameters
 structure BFEpochParameters where
   epoch        : Int
   min_fee_a    : Int
@@ -93,15 +91,18 @@ structure BFEpochParameters where
   -- pvt_pp_security_group : Nat -- DEPRECATED := none
   pvt_p_p_security_group : Option Nat := none
   min_fee_ref_script_cost_per_byte : Option Nat := none
-deriving Lean.FromJson -- Repr
-
+deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFEpochParameters where
 
+-- GET /epochs/{number}/stakes
 structure BFEpochStake where
   stake_address : String
+  pool_id       : String
   amount        : String
-  pool_id?      : Option String := none
 deriving Repr, Lean.FromJson
-
 instance : PrettyToString BFEpochStake where
+
+-- GET /epochs/{number}/stakes/{pool_id} /epochs/{number}/blocks(/{pool_id})
+abbrev BFEpochStakePool := String
+
 end Blockfrost

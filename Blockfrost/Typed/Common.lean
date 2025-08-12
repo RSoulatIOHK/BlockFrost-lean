@@ -8,7 +8,9 @@ structure ListParams where
   order? : Option String := none -- "asc" | "desc"
   from?  : Option Nat := none    -- endpoint-specific meaning (e.g., epoch)
   to?    : Option Nat := none
-deriving Inhabited
+
+instance : Inhabited ListParams where
+  default := { count? := some 100, page? := some 1, order? := "asc", from? := none, to? := none }
 
 def withParams (lp : ListParams) (p : Blockfrost.Path) : Blockfrost.Path :=
   let p := match lp.count? with | some v => p.q "count" (toString v) | none => p

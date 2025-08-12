@@ -9,8 +9,8 @@ open Blockfrost
 open Blockfrost.Models
 
   -- GET /assets
-  def assets: BF (Except BFApiError (List BFAssetList)) :=
-    Blockfrost.assets |>.getJsonM (α := List BFAssetList)
+  def assets: BF (Except BFApiError (List BFAssetListElement)) :=
+    Blockfrost.assets |>.getJsonM (α := List BFAssetListElement )
 
 namespace assets
   -- GET /assets/{asset}
