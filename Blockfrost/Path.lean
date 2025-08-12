@@ -16,7 +16,7 @@ deriving Repr
 def Path.getStringM (p : Path) : BF String :=
   Blockfrost.getStringM p.segs p.qs
 
-def Path.getJsonM [Lean.FromJson α] (p : Path) : BF α :=
+def Path.getJsonM [Lean.FromJson α] (p : Path) : BF (Except Blockfrost.Models.BFApiError α) :=
   Blockfrost.getJsonM (α := α) p.segs p.qs
 
 end Blockfrost

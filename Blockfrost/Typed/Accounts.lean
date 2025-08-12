@@ -9,14 +9,19 @@ open Blockfrost
 open Blockfrost.Models
 
 namespace accounts
-  namespace byStake
-    namespace history
-      /-- GET /accounts/{stake}/history with optional pagination filters. -/
-      def get (stake : String) (lp : ListParams := {}) : BF (Array BFAccountHistoryRow) := do
-        let p := Blockfrost.accounts.history stake |> Blockfrost.Typed.withParams lp
-        p.getJsonM (α := Array BFAccountHistoryRow)
-    end history
-  end byStake
+  -- GET /accounts/{stake_address}
+  @[inline] def byStake (stakeAddress : String) : BF (Except BFApiError BFStakeAddressInfo) :=
+    Blockfrost.accounts.byStake stakeAddress |>.getJsonM (α := BFStakeAddressInfo)
+
+  -- PAGINATION
+  -- namespace byStake
+  --   namespace history
+  --     /-- GET /accounts/{stake}/history with optional pagination filters. -/
+  --     def byStake (stake : String) (lp : ListParams := {}) : BF (Array BFAccountHistory) := do
+  --       let p := Blockfrost.accounts.history stake |> Blockfrost.Typed.withParams lp
+  --       p.getJsonM (α := Array BFAccountHistory)
+  --   end history
+  -- end byStake
 end accounts
 
 end Blockfrost.Typed

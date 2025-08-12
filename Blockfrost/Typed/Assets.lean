@@ -8,9 +8,14 @@ namespace Blockfrost.Typed
 open Blockfrost
 open Blockfrost.Models
 
+  -- GET /assets
+  def assets: BF (Except BFApiError (List BFAssetList)) :=
+    Blockfrost.assets |>.getJsonM (α := List BFAssetList)
+
 namespace assets
-  def byHash (assetId : String) : BF BFAsset :=
-    Blockfrost.assets.byHash assetId |>.getJsonM (α := BFAsset)
+  -- GET /assets/{asset}
+  def byAsset (assetId : String) : BF (Except BFApiError BFAssetInfo) :=
+    Blockfrost.assets.byAsset assetId |>.getJsonM (α := BFAssetInfo)
 end assets
 
 end Blockfrost.Typed

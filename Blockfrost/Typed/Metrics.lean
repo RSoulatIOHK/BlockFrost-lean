@@ -8,11 +8,11 @@ namespace Blockfrost.Typed
 open Blockfrost
 open Blockfrost.Models
 
-def metrics : BF (Array BFMetrics) :=
+def metrics : BF (Except BFApiError (Array BFMetrics)) :=
   Blockfrost.metrics.getJsonM (α := Array BFMetrics)
 
 namespace metrics
-  def endpoints : BF (Array BFEndpoints) :=
+  def endpoints : BF (Except BFApiError (Array BFEndpoints)) :=
     Blockfrost.metrics.endpoints.getJsonM (α := Array BFEndpoints)
 end metrics
 

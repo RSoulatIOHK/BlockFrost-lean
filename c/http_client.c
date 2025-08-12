@@ -91,7 +91,6 @@ LEAN_EXPORT lean_obj_res lcurl_get(lean_obj_arg url, lean_obj_arg w) {
         return lean_io_result_mk_error(lean_mk_string("out of memory"));
     }
 
-    curl_easy_setopt(h, CURLOPT_FAILONERROR, 1L);  // treat HTTP >=400 as failure
     curl_easy_setopt(h, CURLOPT_NOSIGNAL,   1L);   // safety on macOS with timeouts/threads
     curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, ""); // enable decompression
     curl_easy_setopt(h, CURLOPT_URL, c_url);
@@ -111,25 +110,6 @@ LEAN_EXPORT lean_obj_res lcurl_get(lean_obj_arg url, lean_obj_arg w) {
 
     long status = 0;
     curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
-    if (status < 200 || status >= 300) {
-        const char* msg = "HTTP error ";
-        char codebuf[32]; snprintf(codebuf, sizeof(codebuf), "%ld", status);
-        size_t total = strlen(msg) + strlen(codebuf) + 2 + b.size;
-        char* emsg = (char*)malloc(total + 1);
-        if (!emsg) {
-            free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
-            return lean_io_result_mk_error(lean_mk_string("HTTP error (OOM building message)"));
-        }
-        size_t mlen = strlen(msg), clen = strlen(codebuf);
-        memcpy(emsg, msg, mlen);
-        memcpy(emsg + mlen, codebuf, clen);
-        emsg[mlen + clen] = ':'; emsg[mlen + clen + 1] = ' ';
-        memcpy(emsg + mlen + clen + 2, b.data, b.size);
-        emsg[total] = '\0';
-        lean_obj_res err = lean_mk_string(emsg);
-        free(emsg); free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
-        return lean_io_result_mk_error(err);
-    }
 
     lean_obj_res s = lean_mk_string(b.data);
     free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
@@ -162,7 +142,7 @@ LEAN_EXPORT lean_obj_res lcurl_get_with_headers(lean_obj_arg url, lean_obj_arg h
         return lean_io_result_mk_error(lean_mk_string("out of memory building headers"));
     }
 
-    curl_easy_setopt(h, CURLOPT_FAILONERROR, 1L);  // treat HTTP >=400 as failure
+    // curl_easy_setopt(h, CURLOPT_FAILONERROR, 1L);  // treat HTTP >=400 as failure
     curl_easy_setopt(h, CURLOPT_NOSIGNAL,   1L);   // safety on macOS with timeouts/threads
     curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, ""); // enable decompression
     curl_easy_setopt(h, CURLOPT_URL, c_url);
@@ -184,30 +164,6 @@ LEAN_EXPORT lean_obj_res lcurl_get_with_headers(lean_obj_arg url, lean_obj_arg h
 
     long status = 0;
     curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
-    if (status < 200 || status >= 300) {
-        const char* msg = "HTTP error ";
-        char codebuf[32]; snprintf(codebuf, sizeof(codebuf), "%ld", status);
-        size_t total = strlen(msg) + strlen(codebuf) + 2 + b.size;
-        char* emsg = (char*)malloc(total + 1);
-        if (!emsg) {
-            if (hdr_list) curl_slist_free_all(hdr_list);
-            free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
-            return lean_io_result_mk_error(lean_mk_string("HTTP error (OOM building message)"));
-        }
-        size_t mlen = strlen(msg), clen = strlen(codebuf);
-        memcpy(emsg, msg, mlen);
-        memcpy(emsg + mlen, codebuf, clen);
-        emsg[mlen + clen] = ':'; emsg[mlen + clen + 1] = ' ';
-        memcpy(emsg + mlen + clen + 2, b.data, b.size);
-        emsg[total] = '\0';
-
-        lean_obj_res err = lean_mk_string(emsg);
-        free(emsg);
-        if (hdr_list) curl_slist_free_all(hdr_list);
-        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
-        return lean_io_result_mk_error(err);
-    }
-
     lean_obj_res s = lean_mk_string(b.data);
     if (hdr_list) curl_slist_free_all(hdr_list);
     free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
@@ -262,12 +218,6 @@ LEAN_EXPORT lean_obj_res lcurl_get_to_file_with_headers(lean_obj_arg url, lean_o
 
     long status = 0;
     curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
-    if (status < 200 || status >= 300) {
-        if (hdr_list) curl_slist_free_all(hdr_list);
-        curl_easy_cleanup(h); fclose(f); curl_global_cleanup();
-        return lean_io_result_mk_error(lean_mk_string("HTTP non-2xx when writing file"));
-    }
-
     if (hdr_list) curl_slist_free_all(hdr_list);
     curl_easy_cleanup(h);
     fclose(f);

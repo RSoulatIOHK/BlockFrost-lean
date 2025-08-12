@@ -9,7 +9,7 @@ open Blockfrost
 open Blockfrost.Models
 
 namespace epochs
-  def latest : BF BFEpoch :=
+  def latest : BF (Except BFApiError BFEpoch) :=
     Blockfrost.epochs.latest.getJsonM (α := BFEpoch)
 end epochs
 

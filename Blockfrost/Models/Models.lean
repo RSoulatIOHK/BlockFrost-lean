@@ -15,9 +15,12 @@ namespace Blockfrost.Models
 
 -- API Error
 structure BFApiError where
+  status_code : Int
   error       : String
   message     : String
-  status_code : Nat
 deriving Repr, Lean.FromJson, Lean.ToJson
 
+instance : ToString BFApiError where
+  toString (e : BFApiError) :=
+    s!"API Error: {e.status_code} - {e.error} - {e.message}"
 end Blockfrost.Models

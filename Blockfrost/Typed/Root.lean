@@ -8,7 +8,7 @@ namespace Blockfrost.Typed
 open Blockfrost
 open Blockfrost.Models
 -- /root
-def root : BF BFRoot :=
+def root : BF (Except BFApiError BFRoot) :=
   Blockfrost.root.getJsonM (α := BFRoot)
 
 end Blockfrost.Typed

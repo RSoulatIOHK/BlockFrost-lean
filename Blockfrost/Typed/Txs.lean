@@ -9,7 +9,7 @@ open Blockfrost
 open Blockfrost.Models
 
 namespace txs
-  def byHash (h : String) : BF BFTx :=
+  def byHash (h : String) : BF (Except BFApiError BFTx) :=
     Blockfrost.txs.byHash h |>.getJsonM (α := BFTx)
 end txs
 

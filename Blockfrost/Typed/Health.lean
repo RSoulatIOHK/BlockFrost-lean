@@ -9,12 +9,12 @@ open Blockfrost
 open Blockfrost.Models
 
 -- /health
-def health : BF BFHealth :=
+def health : BF (Except BFApiError BFHealth) :=
   Blockfrost.health.getJsonM (α := BFHealth)
 
 namespace health
   -- /health/clock
-  def clock : BF BFClock :=
+  def clock : BF (Except BFApiError BFClock) :=
     Blockfrost.health.clock.getJsonM (α := BFClock)
 end health
 
