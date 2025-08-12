@@ -12,6 +12,8 @@ namespace Blockfrost
     -- GET /pools/retired
     @[inline] def retired : Path := pools.seg "retired"
 
+    -- GET /pools/retiring
+    @[inline] def retiring : Path := pools.seg "retiring"
     -- GET /pools/{pool_id}
     @[inline] def byId (pool_id : String) : Path := pools.seg pool_id
 

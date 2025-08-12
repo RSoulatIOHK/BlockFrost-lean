@@ -105,7 +105,7 @@ deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFTxMir where
 
 -- GET /txs/{hash}/pool_updates
-structure BFPoolMetadata where
+structure BFTxsPoolUpdates where
   url? : Option String := none
   hash? : Option String := none
   ticker? : Option String := none
@@ -113,7 +113,7 @@ structure BFPoolMetadata where
   description? : Option String := none
   homepage? : Option String := none
 deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFPoolMetadata where
+instance : PrettyToString BFTxsPoolUpdates where
 
 structure BFRelay where
   ipv4? : Option String := none
@@ -133,7 +133,7 @@ structure BFTxPoolUpdate where
   fixed_cost : String
   reward_account : String
   owners : List String
-  metadata? : Option BFPoolMetadata := none
+  metadata? : Option BFTxsPoolUpdates := none
   relays? : Option (List BFRelay) := none
   active_epoch : Int
 deriving Repr, Lean.FromJson, Lean.ToJson

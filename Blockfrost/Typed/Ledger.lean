@@ -8,9 +8,8 @@ namespace Blockfrost.Typed
 open Blockfrost
 open Blockfrost.Models
 
-namespace txs
-  def byHash (h : String) : BF (Except BFApiError BFTx) :=
-    Blockfrost.txs.byHash h |>.getJsonM (α := BFTx)
-end txs
+-- GET /genesis
+def genesis : BF (Except BFApiError BFGenesis) :=
+  Blockfrost.genesis.getJsonM (α := BFGenesis)
 
 end Blockfrost.Typed

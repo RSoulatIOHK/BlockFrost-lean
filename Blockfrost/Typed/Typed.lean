@@ -7,4 +7,4 @@ import Blockfrost.Typed.Epochs
 import Blockfrost.Typed.Health
 import Blockfrost.Typed.Metrics
 import Blockfrost.Typed.Root
-import Blockfrost.Typed.Txs
+import Blockfrost.Typed.Transactions

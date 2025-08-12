@@ -105,4 +105,6 @@ instance : PrettyToString BFEpochStake where
 -- GET /epochs/{number}/stakes/{pool_id} /epochs/{number}/blocks(/{pool_id})
 abbrev BFEpochStakePool := String
 
+-- GET /epochs/{number}/blocks
+abbrev BFEpochBlock := String
 end Blockfrost

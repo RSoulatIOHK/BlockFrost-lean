@@ -32,7 +32,7 @@ deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFScriptCbor where
 
 -- GET /scripts/{script_hash}/redeemers
-structure BFScriptRedeemers where
+structure BFScriptRedeemer where
   tx_hash : String
   tx_index : Int
   purpose : String -- TODO: enum?
@@ -42,7 +42,7 @@ structure BFScriptRedeemers where
   unit_steps : String
   fee : String
 deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFScriptRedeemers where
+instance : PrettyToString BFScriptRedeemer where
 
 -- GET /scripts/datum/{datum_hash}
 structure BFScriptDatum where

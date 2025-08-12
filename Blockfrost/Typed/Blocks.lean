@@ -9,16 +9,59 @@ open Blockfrost
 open Blockfrost.Models
 
 namespace blocks
+  -- GET /blocks/latest
   def latest : BF (Except BFApiError BFBlock) :=
     Blockfrost.blocks.latest.getJsonM (α := BFBlock)
 
+  namespace latest
+    -- GET /blocks/latest/txs
+    def txs : BF (Except BFApiError (List BFTransaction)) :=
+      Blockfrost.blocks.latest.txs.getJsonM (α := List BFTransaction)
+
+    namespace txs
+      -- GET /blocks/latest/txs/cbor
+      def cbor : BF (Except BFApiError String) :=
+        Blockfrost.blocks.latest.txs.cbor.getJsonM (α := String)
+    end txs
+  end latest
+
+  -- GET /blocks/{hash_or_number}
   def byHash (id : String) : BF (Except BFApiError BFBlock) :=
     Blockfrost.blocks.byHash id |>.getJsonM (α := BFBlock)
 
-  namespace latest
-    def txsCbor : BF (Except BFApiError (List TxHashCBOR)) :=
-      Blockfrost.blocks.latest.txs.cbor.getJsonM (α := List TxHashCBOR)
-  end latest
+  -- GET /blocks/{hash_or_number}/next
+  def next (id : String) : BF (Except BFApiError BFBlock) :=
+    Blockfrost.blocks.next id |>.getJsonM (α := BFBlock)
+
+  -- GET /blocks/{hash_or_number}/previous
+  def previous (id : String) : BF (Except BFApiError BFBlock) :=
+    Blockfrost.blocks.previous id |>.getJsonM (α := BFBlock)
+
+  namespace slot
+    -- GET /blocks/slot/{slot_number}
+    def bySlot (n : Nat) : BF (Except BFApiError BFBlock) :=
+      Blockfrost.blocks.slot.bySlot n |>.getJsonM (α := BFBlock)
+  end slot
+
+  namespace epoch
+    -- GET /blocks/epoch/{epoch_number}/slot/{slot_number}
+    def byEpochAndSlot (e : Nat) (s : Nat) : BF (Except BFApiError BFBlock) :=
+      Blockfrost.blocks.epoch.byEpochAndSlot e s |>.getJsonM (α := BFBlock)
+  end epoch
+
+  -- GET /blocks/{hash_or_number}/txs
+  def txs (id : String) : BF (Except BFApiError (List BFTransaction)) :=
+    Blockfrost.blocks.txs id |>.getJsonM (α := List BFTransaction)
+
+  namespace txs
+    -- GET /blocks/{hash_or_number}/txs/cbor
+    def cbor (id : String) : BF (Except BFApiError String) :=
+      Blockfrost.blocks.txs.cbor id |>.getJsonM (α := String)
+  end txs
+
+  -- GET /blocks/{hash_or_number}/addresses
+  def addresses (id : String) : BF (Except BFApiError (List BFBlockAddresses)) :=
+    Blockfrost.blocks.addresses id |>.getJsonM (α := List BFBlockAddresses)
 end blocks
 
 end Blockfrost.Typed
