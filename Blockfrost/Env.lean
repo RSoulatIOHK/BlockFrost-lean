@@ -51,9 +51,9 @@ def getStringM (segs : Array String) (qs : Array (String × String) := #[]) : BF
   let url := renderUrl env.base segs qs
   let headers := authHeaders env
 
-  IO.println s!"[BF] GET {url}"
-  for (k, v) in headers do
-    IO.println s!"[BF]   {k}: {v}"
+  -- IO.println s!"[BF] GET {url}"
+  -- for (k, v) in headers do
+  --   IO.println s!"[BF]   {k}: {v}"
 
   try
     Curl.curlGetWithHeaders url headers
