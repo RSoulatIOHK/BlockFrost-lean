@@ -20,8 +20,8 @@ namespace blocks
 
     namespace txs
       -- GET /blocks/latest/txs/cbor
-      def cbor : BF (Except BFApiError String) :=
-        Blockfrost.blocks.latest.txs.cbor.getJsonM (α := String)
+      def cbor : BF (Except BFApiError (List BFBlockTxsCBOR)) :=
+        Blockfrost.blocks.latest.txs.cbor.getJsonM (α := List BFBlockTxsCBOR)
     end txs
   end latest
 
@@ -55,8 +55,8 @@ namespace blocks
 
   namespace txs
     -- GET /blocks/{hash_or_number}/txs/cbor
-    def cbor (id : String) : BF (Except BFApiError String) :=
-      Blockfrost.blocks.txs.cbor id |>.getJsonM (α := String)
+    def cbor (id : String) : BF (Except BFApiError BFBlockTxsCBOR) :=
+      Blockfrost.blocks.txs.cbor id |>.getJsonM (α := BFBlockTxsCBOR)
   end txs
 
   -- GET /blocks/{hash_or_number}/addresses
