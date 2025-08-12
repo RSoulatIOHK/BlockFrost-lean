@@ -1,8 +1,15 @@
 # BlockFrost-lean
 
-A Lean library for interacting with the [Blockfrost API](https://blockfrost.io/).
+> [!WARNING]
+> This SDK is currently in development and NOT ready for production use.
+> 
+> - Not extensively tested
+> - API may change - Breaking changes may occur
+> - No warranty - Use at your own risk
 
-This library provides a typed interface to the Blockfrost API, making it easy to build decentralized applications on the Cardano blockchain with the safety and correctness of the Lean programming language.
+A Lean SDK for [Blockfrost API](https://blockfrost.io/).
+
+This SDK provides a typed interface to the Blockfrost API.
 
 ## Implemented Features
 
@@ -33,6 +40,8 @@ This library is still under development, and many features of the Blockfrost API
 If you are interested in contributing, please feel free to open a pull request. Some of the missing features include:
 
 *   Cardano Utilities
+*   IPFS
+*   POST API
 *   Generation of everything from the OpenAPI spec
 
 Your contributions are greatly appreciated!
