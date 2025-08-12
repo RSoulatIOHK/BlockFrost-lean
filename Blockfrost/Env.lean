@@ -14,8 +14,15 @@ inductive BFError
   | network (msg : String)
   | parse   (msg : String) (body : String)
   | decode  (msg : String) (body : String)
-  | api     (status : Nat) (err : String) (msg : String)  -- ⬅ new
+  | api     (status : Int) (err : String) (msg : String)
 deriving Repr
+
+instance : ToString BFError where
+  toString (e : BFError) := match e with
+    | .network msg => s!"Network error: {msg}"
+    | .parse msg body => s!"Parse error: {msg} (body: {body})"
+    | .decode msg body => s!"Decode error: {msg} (body: {body})"
+    | .api status err msg => s!"API error {status}: {err} - {msg}"
 
 abbrev BF := ReaderT Env (ExceptT BFError IO)
 
@@ -44,11 +51,6 @@ def getStringM (segs : Array String) (qs : Array (String × String) := #[]) : BF
   let url := renderUrl env.base segs qs
   let headers := authHeaders env
 
-  -- DEBUG: print the outgoing request
-  -- IO.println s!"[BF] GET {url}"
-  -- for (k, v) in headers do
-  --   IO.println s!"[BF]   {k}: {v}"
-
   try
     Curl.curlGetWithHeaders url headers
   catch e : IO.Error =>
@@ -75,20 +77,19 @@ def getStringM (segs : Array String) (qs : Array (String × String) := #[]) : BF
     | .error _    => none
   | .error _      => none
 
-def getJsonM [Lean.FromJson α] (segs : Array String) (qs : Array (String × String) := #[]) : BF α := do
+def getJsonM [Lean.FromJson α] (segs : Array String) (qs : Array (String × String) := #[]) : BF (Except Blockfrost.Models.BFApiError α) := do
   let body ← getStringM segs qs
 
-  -- If the body is a Blockfrost error, surface it now.
-  match checkApiError body with
-  | .error err => throw err
-  | .ok ()     => pure ()
-
-  -- Otherwise parse as the expected success type.
-  match Lean.Json.parse body with
-  | .error pe => throw <| BFError.parse pe body
-  | .ok j =>
-    match Lean.fromJson? (α := α) j with
-    | .ok x       => return x
-    | .error derr => throw <| BFError.decode derr body
+  -- Try to decode as API error first
+  if let some apiError := decodeApiError body then
+    return .error apiError
+  else
+    -- Parse as success type
+    match Lean.Json.parse body with
+    | .error pe => throw <| BFError.parse pe body
+    | .ok j =>
+      match Lean.fromJson? (α := α) j with
+      | .ok x       => return .ok x
+      | .error derr => throw <| BFError.decode derr body
 
 end Blockfrost

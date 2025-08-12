@@ -2,6 +2,15 @@ import Lean.Data.Json
 
 namespace Blockfrost.Models
 
+-- GET /
+structure BFRoot where
+  url : String
+  version : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : ToString BFRoot where
+  toString (r : BFRoot) := s!"{r.url} (version: {r.version})"
+
 -- GET /health
 structure BFHealth where
   is_healthy : Bool

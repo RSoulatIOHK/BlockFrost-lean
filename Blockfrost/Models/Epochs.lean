@@ -1,13 +1,11 @@
 import Lean.Data.Json
 import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Common
 
 namespace Blockfrost
 -- This should probably be in Common
 private def opt (pfx : String) (o : Option String) : String :=
   match o with | some x => s!"{pfx}{x}" | none => ""
-
-instance : Repr Lean.Json where
-  reprPrec j _ := Lean.Json.pretty j
 ---
 structure BFEpoch where
   epoch            : Nat
