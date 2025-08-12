@@ -11,14 +11,16 @@ open Blockfrost.Models
 -- Test configuration
 structure TestConfig where
   stakeAddress : String := "stake1u9ylzsgxaa6xctf4juup682ar3juj85n8tx3hthnljg47zctvm3rc"
-  addressForTest : String := "addr1qxqs59lphg8g6qndelq8xwqn60ag3aeyfcp33c2kdp46a09re5df3pzwwmyq946axfcejy5n4x0y99wqpgtp2gd0k09qsgy6pz"
-  assetForTest : String := "b863bc7369f46136ac1048adb2fa7dae3af944c3bbb2be2f216a8d4f426572727953616765"
-  poolId : String := "pool1pu5jlj4q9w9jlxeu370a3c9myx47md5j5m2str0naunn2q3lkdy"
+  addressForTest : String := "addr1q8hsff3uwtphx7dtya7unjwjwug52e5jvqp09je6pwqx8k4jvuxrw2x5rr7e258a33yzkrhhlrrc5ezvd2z7qtdq0gasme44c9"
+  assetForTest : String := "02f8fb8ec5d4d607039faca9cf1e1382fac442877fce90beb8e7218147524f57"
+  poolId : String := "pool1w7c2j0px43jmudhf48ezp7dy8j7904c9l3wc7809lhh2z026hch"
   txHash : String := "f22edbf2bbe1157b8a08d35db65c3bfff5edeb769fa9bf6a73fe01aa2a10d87b"
+  txHashWithMetadata : String := "4fbc508044dd58217c0d9d3a368c373dd817c0f0e451a3cfee43670b3f0c3fc3"
   scriptHash : String := "65c197d565e88a20885e535f93755682444d3c02fd44dd70883fe89e"
   datumHash : String := "db583ad85881a96c73fbb26ab9e24d1120bb38f45385664bb9c797a2ea8d9a2d"
-  drepId : String := "drep1k8rq4ges2z02ssv2w2unh6sh2s3zntwz2quq6zpgj3a82t2m24z"
+  drepId : String := "drep1yg343cyuckglj48a6gpcey7fkfcy5x5f9g65wme3ne9q2mgaedmkm"
   proposalTxHash : String := "315682855f6c1e550b7495034604a85627c264243859d2279145683316f73e58"
+  proposalTxHash2 : String := "9ba6a580bceb8f94e65a683e8291c89382835f46e3cf928eb521f5581ade4820"
   proposalCertIndex : Nat := 0
   metadataLabel: String := "1968"
   policyId: String := "b863bc7369f46136ac1048adb2fa7dae3af944c3bbb2be2f216a8d4f"
@@ -35,7 +37,7 @@ instance : ToString TestResult where
   toString
   | .success name msg => s!"✅ {name}" ++ (if msg.isEmpty then "" else s!" - {msg}")
   | .failure name err => s!"❌ {name} - {err}"
-  | .skipped name reason => s!"⏭️ {name} - {reason}"
+  | .skipped name reason => s!"⏭️  {name} - {reason}"
 
 -- Helper to run a test and catch errors
 def runTest (name : String) (test : BF α) : BF TestResult := do
@@ -153,7 +155,7 @@ def testBlocks (config : TestConfig) : BF (List TestResult) := do
     runTestOptional "GET /blocks/slot/{slot_number}"
       (Blockfrost.Typed.blocks.slot.bySlot config.slotForTest),
     runTestOptional "GET /blocks/epoch/{epoch_number}/slot/{slot_number}"
-      (Blockfrost.Typed.blocks.epoch.byEpochAndSlot config.epochForTest config.slotForTest),
+      (Blockfrost.Typed.blocks.epoch.byEpochAndSlot 576 6810),
     runTestOptional "GET /blocks/{hash_or_number}/txs"
       (Blockfrost.Typed.blocks.txs "500"),
     runTestOptional "GET /blocks/{hash_or_number}/txs/cbor"
@@ -192,7 +194,7 @@ def testEpochs (config : TestConfig): BF (List TestResult) := do
   tests.mapM id
 
 def testGovernance (config : TestConfig) : BF (List TestResult) := do
-  IO.println "🗳️ Testing Governance endpoints..."
+  IO.println "🗳️  Testing Governance endpoints..."
   let tests := [
     runTestOptional "GET /governance/dreps"
       (Blockfrost.Typed.governance.dreps),
@@ -209,15 +211,15 @@ def testGovernance (config : TestConfig) : BF (List TestResult) := do
     runTestOptional "GET /governance/proposals"
       (Blockfrost.Typed.governance.proposals.root),
     runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}"
-      (Blockfrost.Typed.governance.proposals.byTxAndCert config.proposalTxHash config.proposalCertIndex),
+      (Blockfrost.Typed.governance.proposals.byTxAndCert config.proposalTxHash2 config.proposalCertIndex),
     runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/parameters"
-      (Blockfrost.Typed.governance.proposals.parameters config.proposalTxHash config.proposalCertIndex),
+      (Blockfrost.Typed.governance.proposals.parameters config.proposalTxHash2 config.proposalCertIndex),
     runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals"
       (Blockfrost.Typed.governance.proposals.withdrawals config.proposalTxHash config.proposalCertIndex),
     runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/votes"
       (Blockfrost.Typed.governance.proposals.votes config.proposalTxHash config.proposalCertIndex),
     runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/metadata"
-      (Blockfrost.Typed.governance.proposals.metadata config.proposalTxHash config.proposalCertIndex)
+      (Blockfrost.Typed.governance.proposals.metadata config.proposalTxHash2 config.proposalCertIndex)
   ]
 
   tests.mapM id
@@ -369,7 +371,7 @@ def testTransactions (config : TestConfig) : BF (List TestResult) := do
     runTestOptional "GET /txs/{hash}/metadata"
       (Blockfrost.Typed.txs.metadata config.txHash),
     runTestOptional "GET /txs/{hash}/metadata/cbor"
-      (Blockfrost.Typed.txs.metadata.cbor config.txHash),
+      (Blockfrost.Typed.txs.metadata.cbor config.txHashWithMetadata),
     runTestOptional "GET /txs/{hash}/redeemers"
       (Blockfrost.Typed.txs.redeemers config.txHash),
     runTestOptional "GET /txs/{hash}/required_signers"

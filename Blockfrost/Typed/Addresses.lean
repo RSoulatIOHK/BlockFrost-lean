@@ -27,13 +27,13 @@ namespace addresses
 
   namespace utxos
     -- GET /addresses/{address}/utxos/{asset}
-    def byAsset (addr : String) (asset : String) : BF (Except BFApiError BFUtxo) :=
-      Blockfrost.addresses.utxos.byAsset addr asset |>.getJsonM (α := BFUtxo)
+    def byAsset (addr : String) (asset : String) : BF (Except BFApiError (List BFUtxo)) :=
+      Blockfrost.addresses.utxos.byAsset addr asset |>.getJsonM (α := List BFUtxo)
   end utxos
 
   -- GET /addresses/{address}/txs (deprecated)
-  def txs (addr : String) : BF (Except BFApiError BFAddressTxs) :=
-    Blockfrost.addresses.txs addr |>.getJsonM (α := BFAddressTxs)
+  def txs (addr : String) : BF (Except BFApiError (List BFAddressTxs)) :=
+    Blockfrost.addresses.txs addr |>.getJsonM (α := List BFAddressTxs)
 
   -- GET /addresses/{address}/transactions
   def transactions (addr : String) : BF (Except BFApiError (List BFAddressTransactions)) :=

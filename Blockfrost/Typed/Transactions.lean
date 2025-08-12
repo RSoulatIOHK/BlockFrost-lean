@@ -47,8 +47,8 @@ namespace txs
 
   namespace metadata
     -- GET /txs/{hash}/metadata/cbor
-    def cbor (h : String) : BF (Except BFApiError BFTxMetadataCbor) :=
-      Blockfrost.txs.metadata.cbor h |>.getJsonM (α := BFTxMetadataCbor)
+    def cbor (h : String) : BF (Except BFApiError (List BFTxMetadataCbor)) :=
+      Blockfrost.txs.metadata.cbor h |>.getJsonM (α := List BFTxMetadataCbor)
   end metadata
 
   -- GET /txs/{hash}/redeemers
