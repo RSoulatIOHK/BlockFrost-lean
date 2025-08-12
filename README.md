@@ -8,7 +8,6 @@ This library provides a typed interface to the Blockfrost API, making it easy to
 
 Currently, the following API sections are implemented:
 
-*   **Accounts**: Access information about specific accounts.
 *   **Health**: Check the backend health status.
 *   **Metrics**: View historical usage metrics.
 *   **Root**: Access basic API information.
@@ -19,6 +18,7 @@ This library is still under development, and many features of the Blockfrost API
 
 If you are interested in contributing, please feel free to open a pull request. Some of the missing features include:
 
+*   Accounts
 *   Addresses
 *   Assets
 *   Blocks

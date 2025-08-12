@@ -9,8 +9,8 @@ open Blockfrost
 open Blockfrost.Models
 
 namespace addresses
-  def info (addr : String) : BF BFAddress :=
-    Blockfrost.addresses.at' addr |>.getJsonM (α := BFAddress)
+  def byAddress (addr : String) : BF BFAddress :=
+    Blockfrost.addresses.byAddress addr |>.getJsonM (α := BFAddress)
 
   def utxos (addr : String) : BF (List BFUtxo) :=
     Blockfrost.addresses.utxos addr |>.getJsonM (α := List BFUtxo)

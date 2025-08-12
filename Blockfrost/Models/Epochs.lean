@@ -1,16 +1,111 @@
 import Lean.Data.Json
+import Lean.Data.Json.FromToJson
 
 namespace Blockfrost
+-- This should probably be in Common
+private def opt (pfx : String) (o : Option String) : String :=
+  match o with | some x => s!"{pfx}{x}" | none => ""
 
-/-- GET /epochs/latest -/
+instance : Repr Lean.Json where
+  reprPrec j _ := Lean.Json.pretty j
+---
 structure BFEpoch where
-  epoch : Nat
-  start_time? : Option Nat := none
-  end_time?   : Option Nat := none
-  first_block_time? : Option Nat := none
-deriving Repr, Lean.FromJson, Lean.ToJson
+  epoch            : Nat
+  start_time       : Nat
+  end_time         : Nat
+  first_block_time : Nat
+  last_block_time  : Nat
+  block_count      : Nat
+  tx_count         : Nat
+  output           : String
+  fees             : String
+  active_stake?    : Option String := none
+deriving Repr, Lean.FromJson
 
 instance : ToString BFEpoch where
-  toString (e : BFEpoch) := s!"Epoch {e.epoch} (start: {e.start_time?}, end: {e.end_time?}, first block time: {e.first_block_time?})"
+  toString e :=
+    s!"Epoch {e.epoch} [{e.start_time} – {e.end_time}] "
+    ++ s!"blocks={e.block_count} txs={e.tx_count} "
+    ++ s!"output={e.output} fees={e.fees}"
+    ++ (opt " active_stake=" e.active_stake?)
+
+/-- Cost models are language→cost-table maps; until you need a typed table,
+treat them as JSON blobs. -/
+
+structure BFCostModels where
+  plutus_v1? : Option Lean.Json := none
+  plutus_v2? : Option Lean.Json := none
+  plutus_v3? : Option Lean.Json := none
+deriving Repr, Lean.FromJson
+
+structure BFEpochParameters where
+  epoch        : Int
+  min_fee_a    : Int
+  min_fee_b    : Int
+  max_block_size : Int
+  max_tx_size    : Int
+  max_block_header_size : Int
+  key_deposit  : String
+  pool_deposit : String
+  e_max        : Int
+  n_opt        : Int
+  a0           : Nat
+  rho          : Nat
+  decentralisation_param : Nat
+  extra_entropy : Option String := none
+  protocol_major_ver : Int
+  protocol_minor_ver : Int
+
+  min_utxo? : Option String := none -- (deprecated)
+
+  min_pool_cost : String
+  nonce : String
+  cost_models : BFCostModels
+  cost_models_raw : Lean.Json
+  price_mem : Option Nat := none
+  price_step : Option Nat := none
+  max_tx_ex_mem : Option String := none
+  max_tx_ex_steps : Option String := none
+  max_block_ex_mem : Option String := none
+  max_block_ex_steps : Option String := none
+  max_val_size : Option String := none
+  collateral_percent : Option Int := none
+  max_collateral_inputs : Option Int := none
+  coins_per_utxo_size : Option String := none
+
+  coins_per_utxo_word? : Option String := none -- (deprecated)
+
+  pvt_motion_no_confidence : Option Nat := none
+  pvt_committee_normal : Option Nat := none
+  pvt_committee_no_confidence : Option Nat := none
+  pvt_hard_fork_initiation : Option Nat := none
+  dvt_committee_normal : Option Nat := none
+  dvt_committee_no_confidence : Option Nat := none
+  dvt_update_to_constitution : Option Nat := none
+  dvt_hard_fork_initiation : Option Nat := none
+  dvt_p_p_network_group : Option Nat := none
+  dvt_p_p_economic_group : Option Nat := none
+  dvt_p_p_technical_group : Option Nat := none
+  dvt_p_p_gov_group : Option Nat := none
+  dvt_treasury_withdrawal : Option Nat := none
+  committee_min_size : Option String := none
+  committee_max_term_length : Option String := none
+  gov_action_lifetime : Option String := none
+  gov_action_deposit : Option String := none
+  drep_deposit : Option String := none
+  drep_activity : Option String := none
+  -- pvt_pp_security_group : Nat -- DEPRECATED := none
+  pvt_p_p_security_group : Option Nat := none
+  min_fee_ref_script_cost_per_byte : Option Nat := none
+deriving Lean.FromJson -- Repr
+
+structure BFEpochStake where
+  stake_address : String
+  amount        : String
+  pool_id?      : Option String := none
+deriving Repr, Lean.FromJson
+
+instance : ToString BFEpochStake where
+  toString (s : BFEpochStake) := s!"{s.stake_address} {s.amount} (pool: {s.pool_id?})"
 
 end Blockfrost

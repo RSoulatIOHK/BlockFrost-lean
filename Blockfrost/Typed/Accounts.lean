@@ -13,7 +13,7 @@ namespace accounts
     namespace history
       /-- GET /accounts/{stake}/history with optional pagination filters. -/
       def get (stake : String) (lp : ListParams := {}) : BF (Array BFAccountHistoryRow) := do
-        let p := Blockfrost.accounts.byStake.history stake |> Blockfrost.Typed.withParams lp
+        let p := Blockfrost.accounts.history stake |> Blockfrost.Typed.withParams lp
         p.getJsonM (α := Array BFAccountHistoryRow)
     end history
   end byStake
