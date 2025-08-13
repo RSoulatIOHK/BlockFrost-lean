@@ -1,5 +1,5 @@
 # BlockFrost-lean
-[![CI](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yaml/badge.svg)](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yaml)
+[![CI](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yaml/badge.svg)](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yayml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)]()
 [![Lean 4](https://img.shields.io/badge/Lean-4-blue.svg)](https://leanprover.github.io/)
