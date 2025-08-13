@@ -10,31 +10,28 @@ def main (args : List String) : IO Unit := do
     IO.println "Blockfrost API Test Suite"
     IO.println "Usage:"
     IO.println "  ./demo                    # Run all tests"
-    IO.println "  ./demo --help            # Show this help"
-    IO.println "  ./demo health            # Run health tests only"
-    IO.println "  ./demo accounts          # Run account tests only"
-    IO.println "  ./demo network           # Run network tests only"
+    IO.println "  ./demo --help             # Show this help"
+    IO.println "  ./demo accounts           # Run account-related tests"
+    IO.println "  ./demo addresses          # Run address-related tests"
+    IO.println "  ./demo assets             # Run asset-related tests"
+    IO.println "  ./demo blocks             # Run block-related tests"
+    IO.println "  ./demo epochs             # Run epoch-related tests"
+    IO.println "  ./demo governance         # Run governance-related tests"
+    IO.println "  ./demo health             # Run health tests only"
+    IO.println "  ./demo ledgers            # Run ledger tests only"
+    IO.println "  ./demo mempool            # Run mempool tests only"
+    IO.println "  ./demo metadata           # Run metadata tests only"
+    IO.println "  ./demo metrics            # Run metrics tests only"
+    IO.println "  ./demo network            # Run network tests only"
+    IO.println "  ./demo pools              # Run pool tests only"
+    IO.println "  ./demo root               # Run root tests only"
+    IO.println "  ./demo scripts            # Run script tests only"
+    IO.println "  ./demo transactions       # Run transaction tests only"
     IO.println ""
     IO.println "Environment variables:"
     IO.println "  BLOCKFROST_PROJECT_ID    # Required: Your Blockfrost project ID"
-  | ["health"] =>
-    runSpecificTest Tests.runHealthTests
-  | ["accounts"] =>
-    runSpecificTest (Tests.runAccountTests {})
-  | ["network"] =>
-    runSpecificTest Tests.runNetworkTests
   | [suite] =>
     IO.println s!"Unknown test suite: {suite}"
     IO.println "Run './demo --help' for available options"
   | _ =>
     IO.println "Too many arguments. Run './demo --help' for usage."
-
-where
-  runSpecificTest (test : Blockfrost.BF Unit) : IO Unit := do
-    let some pid ← IO.getEnv "BLOCKFROST_PROJECT_ID"
-      | throw <| IO.userError "Set BLOCKFROST_PROJECT_ID environment variable"
-    let env : Blockfrost.Env := {
-      base := "https://cardano-mainnet.blockfrost.io/api/v0",
-      projectId := pid
-    }
-    Blockfrost.BF.run env test

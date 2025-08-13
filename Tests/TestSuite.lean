@@ -412,8 +412,39 @@ def runAllTests (config : TestConfig) : BF (List TestResult) := do
   return allResults
 
 -- Specific test suites
-def runAccountTests (config : TestConfig) : BF Unit := do
+def runAccountsTests : BF Unit := do
+  let config : TestConfig := {}
   let results ← testAccounts config
+  for result in results do
+    IO.println result
+
+def runAddressesTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testAddresses config
+  for result in results do
+    IO.println result
+
+def runAssetsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testAssets config
+  for result in results do
+    IO.println result
+
+def runBlocksTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testBlocks config
+  for result in results do
+    IO.println result
+
+def runEpochsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testEpochs config
+  for result in results do
+    IO.println result
+
+def runGovernanceTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testGovernance config
   for result in results do
     IO.println result
 
@@ -422,10 +453,55 @@ def runHealthTests : BF Unit := do
   for result in results do
     IO.println result
 
+def runLedgerTests : BF Unit := do
+  let results ← testLedger
+  for result in results do
+    IO.println result
+
+def runMempoolTests : BF Unit := do
+  let results ← testMempool
+  for result in results do
+    IO.println result
+
+def runMetadataTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testMetadata config
+  for result in results do
+    IO.println result
+
+def runMetricsTests : BF Unit := do
+  let results ← testMetrics
+  for result in results do
+    IO.println result
+
 def runNetworkTests : BF Unit := do
   let results ← testNetwork
   for result in results do
     IO.println result
+
+def runPoolTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testPools config
+  for result in results do
+    IO.println result
+
+def runRootTests : BF Unit := do
+  let results ← testRoot
+  for result in results do
+    IO.println result
+
+def runScriptsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testScripts config
+  for result in results do
+    IO.println result
+
+def runTransactionsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testTransactions config
+  for result in results do
+    IO.println result
+
 
 end Tests
 
