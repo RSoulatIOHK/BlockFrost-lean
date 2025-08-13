@@ -9,21 +9,21 @@ open Blockfrost
 open Blockfrost.Models
 
 -- GET /pools
-def pools : BF (Except BFApiError (Array BFPoolListElem)) :=
-  Blockfrost.pools.getJsonM (α := Array BFPoolListElem)
+def pools : BF (Except BFApiError (List BFPoolListElem)) :=
+  Blockfrost.pools.getJsonM (α := List BFPoolListElem)
 
 namespace pools
   -- GET /pools/extended
-  def extended : BF (Except BFApiError (Array BFPoolExtended)) :=
-    Blockfrost.pools.extended.getJsonM (α := Array BFPoolExtended)
+  def extended : BF (Except BFApiError (List BFPoolExtended)) :=
+    Blockfrost.pools.extended.getJsonM (α := List BFPoolExtended)
 
   -- GET /pools/retired
-  def retired : BF (Except BFApiError (Array BFPoolRetired)) :=
-    Blockfrost.pools.retired.getJsonM (α := Array BFPoolRetired)
+  def retired : BF (Except BFApiError (List BFPoolRetired)) :=
+    Blockfrost.pools.retired.getJsonM (α := List BFPoolRetired)
 
   -- GET /pools/retiring
-  def retiring : BF (Except BFApiError (Array BFPoolRetired)) :=
-    Blockfrost.pools.retiring.getJsonM (α := Array BFPoolRetired)
+  def retiring : BF (Except BFApiError (List BFPoolRetired)) :=
+    Blockfrost.pools.retiring.getJsonM (α := List BFPoolRetired)
 
   -- GET /pools/{pool_id}
   def byId (poolId : String) : BF (Except BFApiError BFPoolInfo) :=

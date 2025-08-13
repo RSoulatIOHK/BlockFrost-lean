@@ -11,8 +11,8 @@ open Blockfrost.Models
 namespace metadata
   namespace txs
     -- GET /metadata/txs/labels
-    @[inline] def labels : BF (Except BFApiError (Array BFMetadataTxsLabels)) :=
-      Blockfrost.metadata.txs.labels.getJsonM (α := Array BFMetadataTxsLabels)
+    @[inline] def labels : BF (Except BFApiError (List BFMetadataTxsLabels)) :=
+      Blockfrost.metadata.txs.labels.getJsonM (α := List BFMetadataTxsLabels)
 
     namespace labels
       -- GET /metadata/txs/labels/{label}
