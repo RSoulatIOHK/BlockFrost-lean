@@ -1,4 +1,8 @@
 # BlockFrost-lean
+[![CI](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci.yml/badge.svg)](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)]()
+[![Lean 4](https://img.shields.io/badge/Lean-4-blue.svg)](https://leanprover.github.io/)
 
 > [!WARNING]
 > This SDK is currently in development and NOT ready for production use.
@@ -10,6 +14,9 @@
 A Lean SDK for [Blockfrost API](https://blockfrost.io/).
 
 This SDK provides a typed interface to the Blockfrost API.
+
+> [!NOTE]
+> This currently assumes that you have installed libcurl with homebrew
 
 ## Implemented Features
 
