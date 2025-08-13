@@ -43,8 +43,8 @@ namespace accounts
 
   namespace addresses
     -- GET /accounts/{stake_address}/addresses/assets
-    @[inline] def assets (stakeAddress : String) : BF (Except BFApiError (List BFAccountAssets)) :=
-      Blockfrost.accounts.addresses.assets stakeAddress |>.getJsonM (α := List BFAccountAssets)
+    @[inline] def assets (stakeAddress : String) : BF (Except BFApiError (List BFValue)) :=
+      Blockfrost.accounts.addresses.assets stakeAddress |>.getJsonM (α := List BFValue)
 
     -- GET /accounts/{stake_address}/addresses/total
     @[inline] def total (stakeAddress : String) : BF (Except BFApiError BFAddressDetailed) :=

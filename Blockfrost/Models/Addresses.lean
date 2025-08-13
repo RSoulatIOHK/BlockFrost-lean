@@ -1,19 +1,13 @@
 import Lean.Data.Json
 import Blockfrost.Models.Derive
+import Blockfrost.Models.Common
 
 namespace Blockfrost
-
-structure BFUtxoAmount where
-  unit     : String
-  quantity : String
-deriving Repr, Lean.FromJson, Lean.ToJson
-
-instance : PrettyToString BFUtxoAmount where
 
 /-- GET /addresses/{address} -/
 structure BFAddressInfo where
   address : String
-  amount  : List BFUtxoAmount
+  amount  : List BFValue
   stake_address? : Option String := none
   type : String -- TODO: Enum type?
   script : Bool
@@ -21,7 +15,6 @@ deriving Repr, Lean.FromJson, Lean.ToJson
 
 instance : PrettyToString BFAddressInfo where
 
-instance : PrettyToString BFAddressInfo where
 -- GET /addresses/{address}/extended
 structure BFUtxoAmountExtended where
   unit     : String
@@ -45,8 +38,8 @@ instance : PrettyToString BFAddressExtended where
 -- GET /addresses/{address}/total
 structure BFAddressTotal where
   address : String
-  received_sum : List BFUtxoAmount
-  sent_sum : List BFUtxoAmount
+  received_sum : List BFValue
+  sent_sum : List BFValue
   tx_count : Int
 deriving Repr, Lean.FromJson, Lean.ToJson
 
@@ -58,7 +51,7 @@ structure BFUtxo where
   tx_hash        : String
   tx_index       : Option Int := none -- (deprecated)
   output_index   : Int
-  amount         : List BFUtxoAmount
+  amount         : List BFValue
   block          : String
   data_hash?     : Option String := none
   inline_datum?  : Option String := none

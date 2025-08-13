@@ -1,26 +1,18 @@
 import Lean.Data.Json
 import Lean.Data.Json.FromToJson
 import Blockfrost.Models.Derive
-
+import Blockfrost.Models.Common
 namespace Blockfrost
 
 /-- GET /mempool/ /mempool/addresses/{address} -/
 structure BFMempool where
   tx_hash : String
 deriving Repr, Lean.FromJson, Lean.ToJson
-
 instance : PrettyToString BFMempool where
-
--- GET /mempool/{hash}
-structure BFValues where
-  unit     : String
-  quantity : String
-deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFValues where
 
 structure BFMempoolTx where
   hash : String
-  output_amount : List BFValues
+  output_amount : List BFValue
   fees : String
   deposit : String
   size : Int
@@ -50,7 +42,7 @@ instance : PrettyToString BFMempoolInput where
 
 structure BFMempoolOutput where
   address : String
-  amount : List BFValues
+  amount : List BFValue
   output_index : Int
   data_hash? : Option String := none
   inline_datum? : Option String := none

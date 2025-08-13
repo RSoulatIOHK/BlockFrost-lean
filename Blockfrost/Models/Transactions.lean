@@ -4,12 +4,6 @@ import Blockfrost.Models.Common
 
 namespace Blockfrost
 
-structure BFValue where
-  unit : String
-  quantity : String
-deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFValue where
-
 /-- GET /txs/{hash} -/
 structure BFTx where
   hash   : String

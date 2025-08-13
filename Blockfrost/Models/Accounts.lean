@@ -1,5 +1,6 @@
 import Lean.Data.Json
 import Blockfrost.Models.Derive
+import Blockfrost.Models.Common
 
 namespace Blockfrost
 
@@ -72,17 +73,10 @@ deriving Repr, Lean.FromJson, Lean.ToJson
 
 instance : PrettyToString BFAccountAddresses where
 
-structure BFAccountAssets where
-  unit : String
-  quantity : String
-deriving Repr, Lean.FromJson, Lean.ToJson
-
-instance : PrettyToString BFAccountAssets where
-
 structure BFAddressDetailed where
   stake_address : String
-  received_sum : List BFAccountAssets
-  sent_sum : List BFAccountAssets
+  received_sum : List BFValue
+  sent_sum : List BFValue
   tx_count : Int
 deriving Repr, Lean.FromJson, Lean.ToJson
 
@@ -93,7 +87,7 @@ structure BFAddressUtxos where
   tx_hash : String
   tx_index? : Option Int := none -- (deprecated)
   output_index : Int
-  amount : List BFAccountAssets
+  amount : List BFValue
   block : String
   data_hash? : Option String := none
   inlined_datum? : Option String := none
