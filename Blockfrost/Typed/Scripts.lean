@@ -8,8 +8,8 @@ namespace Blockfrost.Typed
 open Blockfrost
 open Blockfrost.Models
   -- GET /scripts
-def scripts : BF (Except BFApiError (Array BFScript)) :=
-  Blockfrost.scripts.getJsonM (α := Array BFScript)
+def scripts : BF (Except BFApiError (List BFScript)) :=
+  Blockfrost.scripts.getJsonM (α := List BFScript)
 namespace scripts
   -- GET /scripts/{hash}
   def byHash (hash : String) : BF (Except BFApiError BFScript) :=
@@ -24,8 +24,8 @@ namespace scripts
     Blockfrost.scripts.cbor hash |>.getJsonM (α := BFScriptCbor)
 
   -- GET /scripts/{hash}/redeemers
-  def redeemers (hash : String) : BF (Except BFApiError (Array BFScriptRedeemer)) :=
-    Blockfrost.scripts.redeemers hash |>.getJsonM (α := Array BFScriptRedeemer)
+  def redeemers (hash : String) : BF (Except BFApiError (List BFScriptRedeemer)) :=
+    Blockfrost.scripts.redeemers hash |>.getJsonM (α := List BFScriptRedeemer)
 
   namespace datum
   -- GET /scripts/datum/{datum_hash}
