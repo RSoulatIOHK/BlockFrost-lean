@@ -50,15 +50,6 @@ instance : PrettyToString BFAssetHistory where
 abbrev BFAssetTxs := String
 instance : PrettyToString BFAssetTxs where
 
--- GET /assets/{asset}/transactions
-structure BFAssetTransaction where
-  tx_hash : String
-  tx_index : Int
-  block_height : Int
-  block_time : Int
-deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFAssetTransaction where
-
 -- GET /assets/{asset}/addresses
 structure BFAssetAddresses where
   address : String

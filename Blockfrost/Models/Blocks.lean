@@ -45,15 +45,14 @@ deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString TxHashCBOR where
 
 -- GET /blocks/{hash_or_number}/addresses
-
-structure BFTransaction where
+structure BFTxHash where
   tx_hash : String
 deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFTransaction where
+instance : PrettyToString BFTxHash where
 
 structure BFBlockAddresses where
   address : String
-  transactions : List BFTransaction
+  transactions : List BFTxHash
 deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFBlockAddresses where
 

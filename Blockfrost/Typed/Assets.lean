@@ -22,8 +22,8 @@ namespace assets
     Blockfrost.assets.history assetId |>.getJsonM (α := List BFAssetHistory)
 
   -- GET /assets/{asset}/transactions
-  def transactions (assetId : String) : BF (Except BFApiError (List BFAssetTransaction)) :=
-    Blockfrost.assets.transactions assetId |>.getJsonM (α := List BFAssetTransaction)
+  def transactions (assetId : String) : BF (Except BFApiError (List BFTransaction)) :=
+    Blockfrost.assets.transactions assetId |>.getJsonM (α := List BFTransaction)
 
   -- GET /assets/{asset}/addresses
   def addresses (assetId : String) : BF (Except BFApiError (List BFAssetAddresses)) :=

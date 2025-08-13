@@ -36,8 +36,8 @@ namespace addresses
     Blockfrost.addresses.txs addr |>.getJsonM (α := List BFAddressTxs)
 
   -- GET /addresses/{address}/transactions
-  def transactions (addr : String) : BF (Except BFApiError (List BFAddressTransactions)) :=
-    Blockfrost.addresses.transactions addr |>.getJsonM (α := List BFAddressTransactions)
+  def transactions (addr : String) : BF (Except BFApiError (List BFTransaction)) :=
+    Blockfrost.addresses.transactions addr |>.getJsonM (α := List BFTransaction)
 end addresses
 
 end Blockfrost.Typed

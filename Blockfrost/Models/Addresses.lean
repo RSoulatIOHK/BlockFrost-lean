@@ -65,13 +65,4 @@ abbrev BFAddressTxs := String
 
 instance : PrettyToString BFAddressTxs where
 
--- GET /addresses/{address}/transactions
-structure BFAddressTransactions where
-  tx_hash : String
-  tx_index : Int
-  block_height : Int
-  block_time : Int
-deriving Repr, Lean.FromJson, Lean.ToJson
-instance : PrettyToString BFAddressTransactions where
-
 end Blockfrost
