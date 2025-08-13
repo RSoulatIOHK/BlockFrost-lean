@@ -18,7 +18,7 @@ structure BFTx where
   block_time : Int
   slot : Int
   index : Int
-  output_amount : Array BFValue
+  output_amount : List BFValue
   fees : String
   deposit : String
   size : Int
@@ -40,7 +40,7 @@ instance : PrettyToString BFTx where
 /-- GET /txs/{hash}/utxos -/
 structure BFTxInput where
   address : String
-  amount : Array BFValue
+  amount : List BFValue
   tx_hash : String
   output_index : Int
   data_hash? : Option String := none
@@ -53,7 +53,7 @@ instance : PrettyToString BFTxInput where
 
 structure BFTxOutput where
   address : String
-  amount : Array BFValue
+  amount : List BFValue
   output_index : Int
   data_hash? : Option String := none
   inline_datum? : Option String := none
@@ -65,8 +65,8 @@ instance : PrettyToString BFTxOutput where
 
 structure BFTxUtxo where
   hash : String
-  inputs : Array BFTxInput
-  outputs : Array BFTxOutput
+  inputs : List BFTxInput
+  outputs : List BFTxOutput
 deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFTxUtxo where
 

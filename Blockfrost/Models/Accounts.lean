@@ -81,8 +81,8 @@ instance : PrettyToString BFAccountAssets where
 
 structure BFAddressDetailed where
   stake_address : String
-  received_sum : Array BFAccountAssets
-  sent_sum : Array BFAccountAssets
+  received_sum : List BFAccountAssets
+  sent_sum : List BFAccountAssets
   tx_count : Int
 deriving Repr, Lean.FromJson, Lean.ToJson
 
@@ -93,7 +93,7 @@ structure BFAddressUtxos where
   tx_hash : String
   tx_index? : Option Int := none -- (deprecated)
   output_index : Int
-  amount : Array BFAccountAssets
+  amount : List BFAccountAssets
   block : String
   data_hash? : Option String := none
   inlined_datum? : Option String := none

@@ -58,9 +58,9 @@ namespace accounts
   -- namespace byStake
   --   namespace history
   --     /-- GET /accounts/{stake}/history with optional pagination filters. -/
-  --     def byStake (stake : String) (lp : ListParams := {}) : BF (Array BFAccountHistory) := do
+  --     def byStake (stake : String) (lp : ListParams := {}) : BF (List BFAccountHistory) := do
   --       let p := Blockfrost.accounts.history stake |> Blockfrost.Typed.withParams lp
-  --       p.getJsonM (α := Array BFAccountHistory)
+  --       p.getJsonM (α := List BFAccountHistory)
   --   end history
   -- end byStake
 end accounts
