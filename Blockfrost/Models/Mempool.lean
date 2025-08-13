@@ -20,7 +20,7 @@ instance : PrettyToString BFValues where
 
 structure BFMempoolTx where
   hash : String
-  output_amount : Array BFValues
+  output_amount : List BFValues
   fees : String
   deposit : String
   size : Int
