@@ -1,0 +1,4685 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.github/
+  workflows/
+    ci-macos.yaml
+Blockfrost/
+  Endpoints/
+    Accounts.lean
+    Addresses.lean
+    Assets.lean
+    Blocks.lean
+    Endpoints.lean
+    Epochs.lean
+    Governance.lean
+    Health.lean
+    Ledger.lean
+    Mempool.lean
+    Metadata.lean
+    Metrics.lean
+    Network.lean
+    Pools.lean
+    Root.lean
+    Scripts.lean
+    Transactions.lean
+  Models/
+    Accounts.lean
+    Addresses.lean
+    Assets.lean
+    Blocks.lean
+    Common.lean
+    Derive.lean
+    Epochs.lean
+    Governance.lean
+    Health.lean
+    Ledger.lean
+    Mempool.lean
+    Metadata.lean
+    Metrics.lean
+    Models.lean
+    Network.lean
+    Pools.lean
+    Root.lean
+    Scripts.lean
+    Transactions.lean
+  Typed/
+    Accounts.lean
+    Addresses.lean
+    Assets.lean
+    Blocks.lean
+    Common.lean
+    Epochs.lean
+    Governance.lean
+    Health.lean
+    Ledger.lean
+    Mempool.lean
+    Metadata.lean
+    Metrics.lean
+    Network.lean
+    Pool.lean
+    Root.lean
+    Scripts.lean
+    Transactions.lean
+    Typed.lean
+  Client.lean
+  Env.lean
+  Path.lean
+  Utils.lean
+c/
+  http_client.c
+CurlFFI/
+  Curl.lean
+Examples/
+  Demo.lean
+  ScriptExtractor.lean
+Tests/
+  TestSuite.lean
+.gitattributes
+.gitignore
+lake-manifest.json
+lakefile.lean
+lean-toolchain
+LICENSE
+Main.lean
+Makefile
+README.md
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".github/workflows/ci-macos.yaml">
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  LEAN_VERSION: stable
+
+jobs:
+  build-macos:
+    name: Build on macOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew install curl
+
+      - name: Setup Lean
+        run: |
+          curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y
+          echo "$HOME/.elan/bin" >> $GITHUB_PATH
+
+      - name: Set Lean version
+        run: |
+          elan toolchain install ${{ env.LEAN_VERSION }}
+          elan default ${{ env.LEAN_VERSION }}
+
+      - name: Cache Lean dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan
+            .lake/build
+          key: lean-macos-${{ env.LEAN_VERSION }}-${{ hashFiles('lakefile.lean', 'lean-toolchain') }}
+          restore-keys: |
+            lean-macos-${{ env.LEAN_VERSION }}-
+
+      - name: Build project
+        run: |
+          lake build
+
+      - name: Run health check
+        env:
+          BLOCKFROST_PROJECT_ID: ${{ secrets.BLOCKFROST_PROJECT_ID }}
+        run: |
+          ./.lake/build/bin/blockfrost-test
+</file>
+
+<file path="Blockfrost/Endpoints/Blocks.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+-- Private as this is not a real API endpoint
+private def blocks_root : Path := Blockfrost.root.seg "blocks"
+
+namespace blocks
+  -- GET /blocks/latest
+  @[inline] def latest : Path := blocks_root.seg "latest"
+
+  namespace latest
+    -- GET /blocks/latest/txs
+    @[inline] def txs  : Path := Blockfrost.blocks.latest.seg "txs"
+    namespace txs
+      -- GET /blocks/latest/txs/cbor
+      @[inline] def cbor : Path := Blockfrost.blocks.latest.txs.seg "cbor"
+    end txs
+  end latest
+
+  -- GET /blocks/{hash_or_number}
+  @[inline] def byHash (h : String) : Path := blocks_root.seg h
+
+  -- GET /blocks/{hash_or_number}/next
+  @[inline] def next (h : String) : Path := byHash h |>.seg "next"
+
+  -- GET /blocks/{hash_or_number}/previous
+  @[inline] def previous (h : String) : Path := byHash h |>.seg "previous"
+
+  namespace slot
+    -- GET /blocks/slot/{slot_number}
+    @[inline] def bySlot (n : Nat) : Path := blocks_root.seg "slot" |>.seg (toString n)
+  end slot
+
+  namespace epoch
+    -- GET /blocks/epoch/{epoch_number}/slot/{slot_number}
+    @[inline] def byEpochAndSlot (e : Nat) (s : Nat) : Path :=
+      blocks_root.seg "epoch" |>.seg (toString e) |>.seg "slot" |>.seg (toString s)
+  end epoch
+
+  -- GET /blocks/{hash_or_number}/txs
+  @[inline] def txs (h : String) : Path := byHash h |>.seg "txs"
+
+  namespace txs
+    -- GET /blocks/{hash_or_number}/txs/cbor
+    @[inline] def cbor (h : String) : Path := Blockfrost.blocks.txs h |>.seg "cbor"
+  end txs
+
+  -- GET /blocks/{hash_or_number}/addresses
+  @[inline] def addresses (h : String) : Path := byHash h |>.seg "addresses"
+
+end blocks
+</file>
+
+<file path="Blockfrost/Endpoints/Epochs.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+
+private def epochs_root : Path := root.seg "epochs"
+-- /epochs
+namespace epochs
+-- GET /epochs/latest
+  @[inline] def latest : Path := epochs_root.seg "latest"
+
+  namespace latest
+    -- GET /epochs/latest/parameters
+    @[inline] def parameters : Path := latest.seg "parameters"
+  end latest
+
+  -- GET /epochs/{epoch}
+  @[inline] def byEpoch (epoch : Nat) : Path :=
+    epochs_root.seg (toString epoch)
+
+  -- GET /epochs/{epoch}/next
+  @[inline] def next (epoch : Nat) : Path :=
+    byEpoch epoch |>.seg "next"
+
+  -- GET /epochs/{epoch}/previous
+  @[inline] def previous (epoch : Nat) : Path :=
+    byEpoch epoch |>.seg "previous"
+
+  -- GET /epochs/{epoch}/stakes
+  @[inline] def stakes (epoch : Nat) : Path :=
+    byEpoch epoch |>.seg "stakes"
+
+  namespace stakes
+    -- GET /epochs/{epoch}/stakes/{pool_id}
+    @[inline] def byPool (epoch : Nat) (poolId : String) : Path :=
+      stakes epoch |>.seg poolId
+  end stakes
+
+  -- GET /epochs/{epoch}/blocks
+  @[inline] def blocks (epoch : Nat) : Path :=
+    byEpoch epoch |>.seg "blocks"
+
+  namespace blocks
+    -- GET /epochs/{epoch}/blocks/{pool_id}
+    @[inline] def byPool (epoch : Nat) (poolId : String) : Path :=
+      blocks epoch |>.seg poolId
+  end blocks
+
+  -- GET /epochs/{epoch}/parameters
+  @[inline] def parameters (epoch : Nat) : Path :=
+    byEpoch epoch |>.seg "parameters"
+
+end epochs
+</file>
+
+<file path="Blockfrost/Endpoints/Governance.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- Private as this is not a real API endpoint
+  private def governance_root : Path := Blockfrost.root.seg "governance"
+
+  namespace governance
+    -- GET /governance/dreps
+    @[inline] def dreps : Path := governance_root.seg "dreps"
+    namespace dreps
+      -- GET /governance/dreps/{drep_id}
+      @[inline] def byDrep (drepId : String) : Path := dreps.seg drepId
+
+      -- GET /governance/dreps/{drep_id}/delegators
+      @[inline] def delegators (drepId : String) : Path := byDrep drepId |>.seg "delegators"
+
+      -- GET /governance/dreps/{drep_id}/metadata
+      @[inline] def metadata (drepId : String) : Path := byDrep drepId |>.seg "metadata"
+
+      -- GET /governance/dreps/{drep_id}/updates
+      @[inline] def updates (drepId : String) : Path := byDrep drepId |>.seg "updates"
+
+      -- GET /governance/dreps/{drep_id}/votes
+      @[inline] def votes (drepId : String) : Path := byDrep drepId |>.seg "votes"
+    end dreps
+
+    namespace proposals
+      -- GET /governance/proposals
+      @[inline] def root : Path := governance_root.seg "proposals"
+
+      -- GET /governance/proposals/{tx_hash}/{cert_index}
+      @[inline] def byTxAndCert (txHash : String) (certIndex : Nat) : Path :=
+        root.seg txHash |>.seg (toString certIndex)
+
+      -- GET /governance/proposals/{tx_hash}/{cert_index}/parameters
+      @[inline] def parameters (txHash : String) (certIndex : Nat) : Path :=
+        byTxAndCert txHash certIndex |>.seg "parameters"
+
+      -- GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals
+      @[inline] def withdrawals (txHash : String) (certIndex : Nat) : Path :=
+        byTxAndCert txHash certIndex |>.seg "withdrawals"
+
+      -- GET /governance/proposals/{tx_hash}/{cert_index}/votes
+      @[inline] def votes (txHash : String) (certIndex : Nat) : Path :=
+        byTxAndCert txHash certIndex |>.seg "votes"
+
+      -- GET /governance/proposals/{tx_hash}/{cert_index}/metadata
+      @[inline] def metadata (txHash : String) (certIndex : Nat) : Path :=
+        byTxAndCert txHash certIndex |>.seg "metadata"
+    end proposals
+end governance
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Health.lean">
+import Blockfrost.Path
+import Blockfrost.Models.Models
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+
+-- /health
+@[inline] def health : Path := root.seg "health"
+
+namespace health
+  @[inline] def clock : Path := health.seg "clock"
+end health
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Ledger.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /genesis
+  @[inline] def genesis : Path := Blockfrost.root.seg "genesis"
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Mempool.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /mempool
+  @[inline] def mempool : Path := Blockfrost.root.seg "mempool"
+
+  namespace mempool
+    -- GET /mempool/{hash}
+    @[inline] def byHash (hash : String) : Path := mempool.seg hash
+
+    namespace addresses
+      -- Private as this is not a real API endpoint
+      private def root : Path := mempool.seg "addresses"
+
+      -- GET /mempool/addresses/{address}
+      @[inline] def byAddress (address : String) : Path := root.seg address
+    end addresses
+  end mempool
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Metrics.lean">
+import Blockfrost.Path
+import Blockfrost.Models.Models
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /metrics
+  @[inline] def metrics : Path := root.seg "metrics"
+
+  namespace metrics
+  -- GET /metrics/endpoints
+    @[inline] def endpoints : Path := metrics.seg "endpoints"
+  end metrics
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Network.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /network
+  @[inline] def network : Path := Blockfrost.root.seg "network"
+  namespace network
+    -- GET /network/eras
+    @[inline] def eras : Path := network.seg "eras"
+  end network
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Root.lean">
+import Blockfrost.Path
+
+namespace Blockfrost
+
+@[inline] def root : Path := {}
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Scripts.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /scripts
+  @[inline] def scripts : Path := Blockfrost.root.seg "scripts"
+
+  namespace scripts
+    -- GET /scripts/{hash}
+    @[inline] def byHash (hash : String) : Path := scripts.seg hash
+
+    -- GET /scripts/{hash}/json
+    @[inline] def json (hash : String) : Path := byHash hash |>.seg "json"
+
+    -- GET /scripts/{hash}/cbor
+    @[inline] def cbor (hash : String) : Path := byHash hash |>.seg "cbor"
+
+    -- GET /scripts/{hash}/redeemers
+    @[inline] def redeemers (hash : String) : Path := byHash hash |>.seg "redeemers"
+
+    namespace datum
+      -- GET /scripts/datum/{datum_hash}
+      @[inline] def byDatumHash (datum_hash : String) : Path := scripts.seg "datum" |>.seg datum_hash
+
+      -- GET /scripts/datum/{datum_hash}/cbor
+      @[inline] def cbor (datum_hash : String) : Path := byDatumHash datum_hash |>.seg "cbor"
+    end datum
+  end scripts
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Transactions.lean">
+import Blockfrost.Path
+import Blockfrost.Models.Models
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+
+namespace txs
+  -- root, private as not an API endpoint
+  private def root : Path := Blockfrost.root.seg "txs"
+
+  -- GET /txs/{hash}
+  @[inline] def byHash (h : String) : Path := root.seg h
+
+  -- GET /txs/{hash}/utxos
+  @[inline] def utxos (h : String) : Path := byHash h |>.seg "utxos"
+
+  -- GET /txs/{hash}/stakes
+  @[inline] def stakes (h : String) : Path := byHash h |>.seg "stakes"
+
+  -- GET /txs/{hash}/delegations
+  @[inline] def delegations (h : String) : Path := byHash h |>.seg "delegations"
+
+  -- GET /txs/{hash}/withdrawals
+  @[inline] def withdrawals (h : String) : Path := byHash h |>.seg "withdrawals"
+
+  -- GET /txs/{hash}/mirs
+  @[inline] def mirs (h : String) : Path := byHash h |>.seg "mirs"
+
+  -- GET /txs/{hash}/pool_updates
+  @[inline] def poolUpdates (h : String) : Path := byHash h |>.seg "pool_updates"
+
+  -- GET /txs/{hash}/pool_retires
+  @[inline] def poolRetires (h : String) : Path := byHash h |>.seg "pool_retires"
+
+  -- GET /txs/{hash}/metadata
+  @[inline] def metadata (h : String) : Path := byHash h |>.seg "metadata"
+
+  namespace metadata
+    -- GET /txs/{hash}/metadata/cbor
+    @[inline] def cbor (h : String) : Path := metadata h |>.seg "cbor"
+  end metadata
+
+  -- GET /txs/{hash}/redeemers
+  @[inline] def redeemers (h : String) : Path := byHash h |>.seg "redeemers"
+
+  -- GET /txs/{hash}/required_signers
+  @[inline] def requiredSigners (h : String) : Path := byHash h |>.seg "required_signers"
+
+  -- GET /txs/{hash}/cbor
+  @[inline] def cbor (h : String) : Path := byHash h |>.seg "cbor"
+
+  -- POST /txs/submit
+  @[inline] def submit : Path := root.seg "submit"
+
+end txs
+</file>
+
+<file path="Blockfrost/Models/Derive.lean">
+import Lean.Data.Json
+
+class PrettyToString (α : Type) where
+
+instance {α} [Lean.ToJson α] [PrettyToString α] : ToString α where
+  toString a := Lean.Json.pretty (Lean.toJson a)
+</file>
+
+<file path="Blockfrost/Models/Governance.lean">
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Common
+import Blockfrost.Models.Derive
+import Blockfrost.Models.Epochs
+
+namespace Blockfrost
+
+-- GET /governance/dreps
+structure BFDRep where
+  drep_id : String
+  hex     : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFDRep where
+
+-- GET /governance/dreps/{drep_id}
+structure BFDRepInfo where
+  drep_id : String
+  hex     : String
+  amount : String
+  active? : Option Bool := none -- (deprecated)
+  active_since? : Option Int := none -- (deprecated)
+  has_script : Bool
+  retired : Bool
+  expired : Bool
+  last_active_epoch? : Option Int := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFDRepInfo where
+
+-- GET /governance/dreps/{drep_id}/delegators
+structure BFDRepDelegator where
+  address : String
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFDRepDelegator where
+
+-- GET /governance/dreps/{drep_id}/metadata
+structure BFDRepMetadata where
+  drep_id : String
+  hex : String
+  url : String
+  hash : String
+  jsonMetadata : Lean.Json -- Any of several stuff
+  bytes : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFDRepMetadata where
+
+-- GET /governance/dreps/{drep_id}/updates
+structure BFDRepUpdate where
+  tx_hash : String
+  cert_index : Int
+  action : String -- TODO: Enum type?
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFDRepUpdate where
+
+-- GET /governance/dreps/{drep_id}/votes
+structure BFDRepVote where
+  tx_hash : String
+  cert_index : Int
+  vote : String -- TODO: Enum type?
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFDRepVote where
+
+-- GET /governance/proposals
+structure BFProposal where
+  tx_hash : String
+  cert_index : Int
+  governance_type : String -- TODO: Enum type?
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFProposal where
+
+-- GET /governance/proposals/{tx_hash}/{cert_index}
+structure BFProposalInfo where
+  tx_hash : String
+  cert_index : Int
+  governance_type : String -- TODO: Enum type?
+  governance_description? : Option Lean.Json := none -- anything
+  deposit : String
+  return_address : String
+  ratified_epoch? : Option Int := none
+  enacted_epoch? : Option Int := none
+  dropped_epoch? : Option Int := none
+  expired_epoch? : Option Int := none
+  expiration : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFProposalInfo where
+
+-- GET /governance/proposals/{tx_hash}/{cert_index}/parameters
+structure BFProposalParameters where
+  tx_hash : String
+  cert_index : Int
+  parameters : BFEpochParameters
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFProposalParameters where
+
+-- GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals
+structure BFProposalWithdrawal where
+  stake_address : String
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFProposalWithdrawal where
+
+-- GET /governance/proposals/{tx_hash}/{cert_index}/votes
+structure BFProposalVote where
+  tx_hash : String
+  cert_index : Int
+  voter_role : String -- TODO: Enum type?
+  voter : String
+  vote : String -- TODO: Enum type?
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFProposalVote where
+
+-- GET /governance/proposals/{tx_hash}/{cert_index}/metadata
+structure BFProposalMetadata where
+  tx_hash : String
+  cert_index : Int
+  url : String
+  hash : String
+  jsonMetadata : Lean.Json -- Any of several stuff
+  bytes : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFProposalMetadata where
+</file>
+
+<file path="Blockfrost/Models/Metadata.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Common
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+/-- GET /metadata/txs/labels -/
+structure BFMetadataTxsLabels where
+  label : String
+  cip10? : Option String := none
+  count : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMetadataTxsLabels where
+
+-- GET /metadata/txs/labels/{label} -/
+structure BFMetadataTxsLabelsDetail where
+  tx_hash : String
+  json_metadata : Lean.Json -- Any of several stuff
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMetadataTxsLabelsDetail where
+
+-- GET /metadata/txs/labels/{label}/cbor -/
+structure BFMetadataTxsLabelsCbor where
+  tx_hash : String
+  cbor_metadata? : Option String := none -- (deprecated)
+  metadata : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMetadataTxsLabelsCbor where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Network.lean">
+import Lean.Data.Json
+-- import Blockfrost.Models.Common
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+
+/-- GET /network -/
+structure BFSupply where
+  max : String
+  total : String
+  circulating : String
+  locked : String
+  treasury : String
+  reserves : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFSupply where
+
+structure BFStake where
+  live : String
+  active : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFStake where
+
+structure BFNetwork where
+  supply : BFSupply
+  stake : BFStake
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFNetwork where
+
+-- GET /network/eras
+structure BFBoundary where
+  time : Nat
+  slot : Int
+  epoch : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFBoundary where
+
+structure BFNetworkParameter where
+ epoch_length : Int
+ slot_length : Nat
+ safe_zone : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFNetworkParameter where
+
+structure BFNetworkEra where
+  start : BFBoundary
+  «end» : BFBoundary
+  parameters : BFNetworkParameter
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFNetworkEra where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Typed/Governance.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace governance
+  -- GET /governance/dreps
+  def dreps : BF (Except BFApiError (List BFDRep)) :=
+    Blockfrost.governance.dreps.getJsonM (α := List BFDRep)
+
+  namespace dreps
+    -- GET /governance/dreps/{drep_id}
+    def byDrep (drepId : String) : BF (Except BFApiError BFDRep) :=
+      Blockfrost.governance.dreps.byDrep drepId |>.getJsonM (α := BFDRep)
+
+    -- GET /governance/dreps/{drep_id}/delegators
+    def delegators (drepId : String) : BF (Except BFApiError (List BFDRepDelegator)) :=
+      Blockfrost.governance.dreps.delegators drepId |>.getJsonM (α := List BFDRepDelegator)
+
+    -- GET /governance/dreps/{drep_id}/metadata
+    def metadata (drepId : String) : BF (Except BFApiError BFDRepMetadata) :=
+      Blockfrost.governance.dreps.metadata drepId |>.getJsonM (α := BFDRepMetadata)
+
+    -- GET /governance/dreps/{drep_id}/updates
+    def updates (drepId : String) : BF (Except BFApiError (List BFDRepUpdate)) :=
+      Blockfrost.governance.dreps.updates drepId |>.getJsonM (α := List BFDRepUpdate)
+
+    -- GET /governance/dreps/{drep_id}/votes
+    def votes (drepId : String) : BF (Except BFApiError (List BFDRepVote)) :=
+      Blockfrost.governance.dreps.votes drepId |>.getJsonM (α := List BFDRepVote)
+  end dreps
+
+  namespace proposals
+    -- GET /governance/proposals
+    def root : BF (Except BFApiError (List BFProposal)) :=
+      Blockfrost.governance.proposals.root.getJsonM (α := List BFProposal)
+
+    -- GET /governance/proposals/{tx_hash}/{cert_index}
+    def byTxAndCert (txHash : String) (certIndex : Nat) : BF (Except BFApiError BFProposal) :=
+      Blockfrost.governance.proposals.byTxAndCert txHash certIndex |>.getJsonM (α := BFProposal)
+
+    -- GET /governance/proposals/{tx_hash}/{cert_index}/parameters
+    def parameters (txHash : String) (certIndex : Nat) : BF (Except BFApiError BFProposalParameters) :=
+      Blockfrost.governance.proposals.parameters txHash certIndex |>.getJsonM (α := BFProposalParameters)
+
+    -- GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals
+    def withdrawals (txHash : String) (certIndex : Nat) : BF (Except BFApiError (List BFProposalWithdrawal)) :=
+      Blockfrost.governance.proposals.withdrawals txHash certIndex |>.getJsonM (α := List BFProposalWithdrawal)
+
+    -- GET /governance/proposals/{tx_hash}/{cert_index}/votes
+    def votes (txHash : String) (certIndex : Nat) : BF (Except BFApiError (List BFProposalVote)) :=
+      Blockfrost.governance.proposals.votes txHash certIndex |>.getJsonM (α := List BFProposalVote)
+
+    -- GET /governance/proposals/{tx_hash}/{cert_index}/metadata
+    def metadata (txHash : String) (certIndex : Nat) : BF (Except BFApiError BFProposalMetadata) :=
+      Blockfrost.governance.proposals.metadata txHash certIndex |>.getJsonM (α := BFProposalMetadata)
+  end proposals
+</file>
+
+<file path="Blockfrost/Typed/Ledger.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+-- GET /genesis
+def genesis : BF (Except BFApiError BFGenesis) :=
+  Blockfrost.genesis.getJsonM (α := BFGenesis)
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Network.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+-- GET /network
+def network : BF (Except BFApiError BFNetwork) :=
+  Blockfrost.network.getJsonM (α := BFNetwork)
+
+  namespace network
+    -- GET /network/eras
+    def eras : BF (Except BFApiError (List BFNetworkEra)) :=
+      Blockfrost.network.eras.getJsonM (α := List BFNetworkEra)
+  end network
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Utils.lean">
+namespace Blockfrost.Utils
+
+def plural (n : Nat):=
+  if n == 1 then "" else "s"
+
+/-- Handy helper if you want raw bytes from a hex CBOR string. -/
+def hexToBytes (hex : String) : Except String ByteArray := Id.run do
+  if hex.length % 2 != 0 then return .error "hex length must be even"
+  let hexVal (c : Char) : Option UInt8 :=
+    if '0' ≤ c ∧ c ≤ '9' then some (UInt8.ofNat (c.toNat - '0'.toNat))
+    else if 'a' ≤ c ∧ c ≤ 'f' then some (UInt8.ofNat (10 + c.toNat - 'a'.toNat))
+    else if 'A' ≤ c ∧ c ≤ 'F' then some (UInt8.ofNat (10 + c.toNat - 'A'.toNat))
+    else none
+  let rec loop (i : Nat) (acc : ByteArray) :=
+    if h : i + 1 < hex.length then
+      let hi := hex.get ⟨i⟩
+      let lo := hex.get ⟨i+1⟩
+      match hexVal hi, hexVal lo with
+      | some a, some b =>
+        let byte := (a.toNat <<< 4) + b.toNat
+        loop (i+2) (acc.push (UInt8.ofNat byte))
+      | _, _ => .error s!"invalid hex at pos {i}"
+    else
+      .ok acc
+  loop 0 ByteArray.empty
+
+end Blockfrost.Utils
+</file>
+
+<file path="Examples/Demo.lean">
+import Blockfrost.Env
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Typed
+
+open Blockfrost
+open Blockfrost.BF
+open Blockfrost.Models
+
+-- Helper to print results nicely
+def printResult [ToString α] (name : String) (result : Except BFApiError α) : IO Unit :=
+  match result with
+  | .error apiError => IO.println s!"{name}: ❌ {apiError.error} - {apiError.message}"
+  | .ok value => IO.println s!"{name}: ✅ {value}"
+
+-- Example: Get network info
+def exampleNetworkInfo : BF Unit := do
+  IO.println "📡 Getting network information..."
+  let networkInfo ← Blockfrost.Typed.network
+  printResult "Network" networkInfo
+
+-- Example: Get latest block
+def exampleLatestBlock : BF Unit := do
+  IO.println "🧱 Getting latest block..."
+  let latestBlock ← Blockfrost.Typed.blocks.latest
+  printResult "Latest Block" latestBlock
+
+-- Example: Get account info
+def exampleAccountInfo (stakeAddress : String) : BF Unit := do
+  IO.println s!"👤 Getting account info for {stakeAddress}..."
+  let account ← Blockfrost.Typed.accounts.byStake stakeAddress
+  printResult "Account" account
+
+-- Example: Get address UTXOs
+def exampleAddressUtxos (address : String) : BF Unit := do
+  IO.println s!"💰 Getting UTXOs for {address}..."
+  let utxos ← Blockfrost.Typed.addresses.utxos address
+  match utxos with
+  | .error apiError => IO.println s!"❌ {apiError.error} - {apiError.message}"
+  | .ok utxoList =>
+    IO.println s!"✅ Found {utxoList.length} UTXOs"
+    for utxo in utxoList.take 3 do -- Show first 3
+      IO.println s!"  UTXO: {utxo.tx_hash}#{utxo.output_index}"
+
+-- Example: Get asset information
+def exampleAssetInfo (asset : String) : BF Unit := do
+  IO.println s!"💎 Getting asset info for {asset}..."
+  let assetInfo ← Blockfrost.Typed.assets.byAsset asset
+  printResult "Asset" assetInfo
+
+-- Example: Get transaction details
+def exampleTransactionInfo (txHash : String) : BF Unit := do
+  IO.println s!"📝 Getting transaction info for {txHash}..."
+  let txInfo ← Blockfrost.Typed.txs.byHash txHash
+  printResult "Transaction" txInfo
+
+  -- Also get UTXOs for this transaction
+  let txUtxos ← Blockfrost.Typed.txs.utxos txHash
+  match txUtxos with
+  | .error _ => IO.println "  No UTXO info available"
+  | .ok utxoInfo =>
+    IO.println s!"  Inputs: {utxoInfo.inputs.size}, Outputs: {utxoInfo.outputs.size}"
+
+-- Example: Search for pools
+def examplePools : BF Unit := do
+  IO.println "🏊 Getting pool list..."
+  let pools ← Blockfrost.Typed.pools
+  match pools with
+  | .error apiError => IO.println s!"❌ {apiError.error}"
+  | .ok poolList =>
+    IO.println s!"✅ Found {poolList.size} pools"
+    for pool in poolList.take 5 do -- Show first 5
+      IO.println s!"  Pool: {pool}"
+
+-- Demo configuration
+structure DemoConfig where
+  stakeAddress : String := "stake1u9ylzsgxaa6xctf4juup682ar3juj85n8tx3hthnljg47zctvm3rc"
+  address : String := "addr1qxqs59lphg8g6qndelq8xwqn60ag3aeyfcp33c2kdp46a09re5df3pzwwmyq946axfcejy5n4x0y99wqpgtp2gd0k09qsgy6pz"
+  asset : String := "b863bc7369f46136ac1048adb2fa7dae3af944c3bbb2be2f216a8d4f426572727953616765"
+  txHash : String := "f22edbf2bbe1157b8a08d35db65c3bfff5edeb769fa9bf6a73fe01aa2a10d87b"
+
+-- Main demo function
+def runDemo : IO Unit := do
+  let some pid ← IO.getEnv "BLOCKFROST_PROJECT_ID"
+    | throw <| IO.userError "Set BLOCKFROST_PROJECT_ID environment variable"
+  let env : Env := { base := "https://cardano-mainnet.blockfrost.io/api/v0", projectId := pid }
+  let config : DemoConfig := {}
+
+  IO.println "🚀 Blockfrost SDK Demo"
+  IO.println "======================"
+
+  BF.run env do
+    -- Run examples
+    exampleNetworkInfo
+    IO.println ""
+
+    exampleLatestBlock
+    IO.println ""
+
+    exampleAccountInfo config.stakeAddress
+    IO.println ""
+
+    exampleAddressUtxos config.address
+    IO.println ""
+
+    exampleAssetInfo config.asset
+    IO.println ""
+
+    exampleTransactionInfo config.txHash
+    IO.println ""
+
+    examplePools
+    IO.println ""
+
+  IO.println "✨ Demo completed!"
+
+-- Quick health check
+def healthCheck : IO Unit := do
+  let some pid ← IO.getEnv "BLOCKFROST_PROJECT_ID"
+    | throw <| IO.userError "Set BLOCKFROST_PROJECT_ID environment variable"
+  let env : Env := { base := "https://cardano-mainnet.blockfrost.io/api/v0", projectId := pid }
+
+  BF.run env do
+    IO.println "🏥 Health Check..."
+    let health ← Blockfrost.Typed.health
+    match health with
+    | .error apiError =>
+      IO.println s!"❌ API Health Check Failed: {apiError.message}"
+    | .ok _ =>
+      IO.println "✅ Blockfrost API is healthy"
+</file>
+
+<file path="Examples/ScriptExtractor.lean">
+-- Main.lean - Script Extractor using existing BlockFrost SDK
+
+import Lean
+import Init.System.IO
+import Init.Data.String.Basic
+import Blockfrost.Typed.Typed
+
+-- Configuration
+structure Config where
+  blockfrostApiKey : String
+  network : String
+  outputDir : String
+  deriving Repr
+
+-- Helper to extract unique script hashes from transaction
+def extractScriptHashes (tx : BlockFrost.Transaction) : List String :=
+  let mut scriptHashes : List String := []
+
+  -- From inputs (spending scripts)
+  -- Expecting tx.inputs to have script_hash field for plutus scripts
+  for input in tx.inputs do
+    match input.script_hash with
+    | some hash => scriptHashes := hash :: scriptHashes
+    | none => continue
+
+  -- From outputs (reference scripts)
+  -- Expecting tx.outputs to have reference_script field
+  for output in tx.outputs do
+    match output.reference_script with
+    | some script => scriptHashes := script.script_hash :: scriptHashes
+    | none => continue
+
+  -- From withdrawals (stake address scripts)
+  -- Expecting tx.withdrawals to have script_hash field
+  for withdrawal in tx.withdrawals do
+    match withdrawal.script_hash with
+    | some hash => scriptHashes := hash :: scriptHashes
+    | none => continue
+
+  -- From certificates (delegation/pool scripts)
+  -- Expecting tx.certificates to have script_hash field
+  for cert in tx.certificates do
+    match cert.script_hash with
+    | some hash => scriptHashes := hash :: scriptHashes
+    | none => continue
+
+  -- From minting (policy scripts)
+  -- Expecting tx.mint to have policy_id that equals script_hash for plutus scripts
+  for mint in tx.mint do
+    scriptHashes := mint.policy_id :: scriptHashes
+
+  scriptHashes.eraseDups
+
+-- Write CBOR hex string to file (for aiken)
+def writeCborToFile (cborHex : String) (filePath : String) : IO Unit := do
+  try
+    let handle ← IO.FS.Handle.mk filePath IO.FS.Mode.write
+    handle.putStr cborHex
+    handle.flush
+  catch e =>
+    IO.println s!"Error writing CBOR file {filePath}: {e}"
+    throw e
+
+-- Call aiken to decode CBOR to UPLC
+def decodeCborToUplc (cborFile : String) (uplcFile : String) : IO Bool := do
+  try
+    let proc := {
+      cmd := "aiken",
+      args := #["uplc", "decode", cborFile, "--cbor"],
+      stdin := IO.Process.Stdio.null,
+      stdout := IO.Process.Stdio.piped,
+      stderr := IO.Process.Stdio.piped
+    }
+
+    let child ← IO.Process.spawn proc
+    let output ← child.stdout.readToEnd
+    let stderr ← child.stderr.readToEnd
+    let exitCode ← child.wait
+
+    if exitCode == 0 then
+      let handle ← IO.FS.Handle.mk uplcFile IO.FS.Mode.write
+      handle.putStr output
+      handle.flush
+      IO.println s!"✓ Converted {cborFile} → {uplcFile}"
+      return true
+    else
+      IO.println s!"✗ Aiken decode failed for {cborFile}: {stderr}"
+      return false
+  catch e =>
+    IO.println s!"✗ Error calling aiken: {e}"
+    return false
+
+-- Process a single script hash
+def processScript (api : BlockFrost.API) (config : Config) (scriptHash : String) : IO Bool := do
+  IO.println s!"Processing script: {scriptHash}"
+
+  try
+    -- GET /scripts/{script_hash}/cbor - Get script CBOR
+    let scriptCbor ← api.getScriptCbor scriptHash
+
+    let cborFile := s!"{config.outputDir}/{scriptHash}.cbor"
+    let uplcFile := s!"{config.outputDir}/{scriptHash}.uplc"
+
+    -- Write CBOR to temporary file
+    writeCborToFile scriptCbor.cbor cborFile
+
+    -- Convert to UPLC using aiken
+    let success ← decodeCborToUplc cborFile uplcFile
+
+    if success then
+      -- Clean up temporary CBOR file
+      IO.FS.removeFile cborFile
+      return true
+    else
+      return false
+
+  catch e =>
+    IO.println s!"✗ Error processing script {scriptHash}: {e}"
+    return false
+
+-- Main processing function
+def processTransaction (api : BlockFrost.API) (config : Config) (txHash : String) : IO Unit := do
+  IO.println s!"Processing transaction: {txHash}"
+  IO.println s!"Output directory: {config.outputDir}"
+  IO.println ""
+
+  try
+    -- Create output directory
+    IO.FS.createDirAll config.outputDir
+
+    -- GET /txs/{hash}/utxos - Get transaction inputs/outputs with UTXOs
+    let txUtxos ← api.getTransactionUtxos txHash
+
+    -- GET /txs/{hash} - Get basic transaction info
+    let txInfo ← api.getTransaction txHash
+
+    -- GET /txs/{hash}/withdrawals - Get withdrawals (if any)
+    let withdrawals ← api.getTransactionWithdrawals txHash
+
+    -- GET /txs/{hash}/mints - Get minting info (if any)
+    let mints ← api.getTransactionMints txHash
+
+    -- GET /txs/{hash}/delegations - Get delegation certificates (if any)
+    let delegations ← api.getTransactionDelegations txHash
+
+    -- GET /txs/{hash}/pool_updates - Get pool registration/updates (if any)
+    let poolUpdates ← api.getTransactionPoolUpdates txHash
+
+    -- GET /txs/{hash}/pool_retires - Get pool retirements (if any)
+    let poolRetires ← api.getTransactionPoolRetires txHash
+
+    -- Combine all into transaction structure (you'll need to adapt this to your types)
+    let fullTx : BlockFrost.Transaction := {
+      hash := txHash,
+      inputs := txUtxos.inputs,
+      outputs := txUtxos.outputs,
+      withdrawals := withdrawals,
+      mint := mints,
+      certificates := delegations ++ poolUpdates ++ poolRetires
+      -- Add other fields as needed from txInfo
+    }
+
+    -- Extract all script hashes
+    let scriptHashes := extractScriptHashes fullTx
+
+    if scriptHashes.isEmpty then
+      IO.println "No scripts found in this transaction."
+      return
+
+    IO.println s!"Found {scriptHashes.length} unique script(s):"
+    for hash in scriptHashes do
+      IO.println s!"  - {hash}"
+    IO.println ""
+
+    -- Process each script
+    let mut successCount := 0
+    for scriptHash in scriptHashes do
+      let success ← processScript api config scriptHash
+      if success then
+        successCount := successCount + 1
+
+    IO.println ""
+    IO.println s!"Summary: {successCount}/{scriptHashes.length} scripts successfully converted to UPLC"
+
+  catch e =>
+    IO.println s!"Error processing transaction: {e}"
+
+-- Load configuration from environment and args
+def loadConfig (args : List String) : IO Config := do
+  -- Get API key from environment
+  let apiKey ← match ← IO.getEnv "BLOCKFROST_API_KEY" with
+    | some key =>
+      if key.trim.isEmpty then
+        throw (IO.userError "BLOCKFROST_API_KEY is empty")
+      else
+        pure key.trim
+    | none =>
+      throw (IO.userError "BLOCKFROST_API_KEY environment variable not set")
+
+  -- Get network from environment (default to mainnet)
+  let network := (← IO.getEnv "BLOCKFROST_NETWORK").getD "mainnet"
+
+  -- Get output directory from args or default
+  let outputDir := match args.get? 1 with
+    | some dir => dir
+    | none => "./scripts_output"
+
+  return { blockfrostApiKey := apiKey, network := network, outputDir := outputDir }
+
+-- Validate transaction hash format
+def isValidTxHash (hash : String) : Bool :=
+  hash.length == 64 && hash.all (fun c => c.isDigit || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+
+-- Main function
+def main (args : List String) : IO UInt32 := do
+  -- Show usage if no args
+  if args.isEmpty then
+    IO.println "Usage: script-extractor <transaction_hash> [output_directory]"
+    IO.println ""
+    IO.println "Environment variables:"
+    IO.println "  BLOCKFROST_API_KEY  - Your Blockfrost API key (required)"
+    IO.println "  BLOCKFROST_NETWORK  - Network: mainnet, testnet, preview, preprod (default: mainnet)"
+    IO.println ""
+    IO.println "Examples:"
+    IO.println "  export BLOCKFROST_API_KEY=mainnet_your_key_here"
+    IO.println "  export BLOCKFROST_NETWORK=mainnet"
+    IO.println "  ./script-extractor abc123def456... ./my_scripts"
+    IO.println ""
+    IO.println "  export BLOCKFROST_API_KEY=preview_your_key_here"
+    IO.println "  export BLOCKFROST_NETWORK=preview"
+    IO.println "  ./script-extractor def789abc012... ./testnet_scripts"
+    return 1
+
+  try
+    -- Load configuration
+    let config ← loadConfig args
+    let txHash := args.head!
+
+    -- Validate transaction hash
+    if not (isValidTxHash txHash) then
+      IO.println s!"Error: Invalid transaction hash format: {txHash}"
+      IO.println "Transaction hash should be 64 characters of hexadecimal"
+      return 1
+
+    -- Initialize BlockFrost API (you'll map this to your API constructor)
+    let api ← BlockFrost.API.new config.blockfrostApiKey config.network
+
+    IO.println "Script Extractor"
+    IO.println "================"
+    IO.println s!"Network: {config.network}"
+    IO.println s!"Transaction: {txHash}"
+    IO.println ""
+
+    -- Process the transaction
+    processTransaction api config txHash
+
+    IO.println ""
+    IO.println "✓ Processing complete!"
+    return 0
+
+  catch e =>
+    IO.println s!"Error: {e}"
+    return 1
+
+-- Expected API endpoints (comments for mapping to your implementation):
+/-
+BlockFrost.API.new : String → String → IO BlockFrost.API
+  -- Constructor for your API client
+
+api.getTransactionUtxos : String → IO BlockFrost.TransactionUtxos
+  -- GET /txs/{hash}/utxos
+
+api.getTransaction : String → IO BlockFrost.TransactionInfo
+  -- GET /txs/{hash}
+
+api.getTransactionWithdrawals : String → IO (List BlockFrost.Withdrawal)
+  -- GET /txs/{hash}/withdrawals
+
+api.getTransactionMints : String → IO (List BlockFrost.Mint)
+  -- GET /txs/{hash}/mints
+
+api.getTransactionDelegations : String → IO (List BlockFrost.Delegation)
+  -- GET /txs/{hash}/delegations
+
+api.getTransactionPoolUpdates : String → IO (List BlockFrost.PoolUpdate)
+  -- GET /txs/{hash}/pool_updates
+
+api.getTransactionPoolRetires : String → IO (List BlockFrost.PoolRetire)
+  -- GET /txs/{hash}/pool_retires
+
+api.getScriptCbor : String → IO BlockFrost.ScriptCbor
+  -- GET /scripts/{script_hash}/cbor
+-/
+</file>
+
+<file path=".gitattributes">
+# Auto detect text files and perform LF normalization
+* text=auto
+</file>
+
+<file path="lake-manifest.json">
+{"version": "1.1.0",
+ "packagesDir": ".lake/packages",
+ "packages": [],
+ "name": "«curl-ffi-demo»",
+ "lakeDir": ".lake"}
+</file>
+
+<file path="LICENSE">
+Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "[]"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright [yyyy] [name of copyright owner]
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+</file>
+
+<file path="Makefile">
+# Makefile for Blockfrost Lean4 SDK
+
+.PHONY: build test clean demo health check help
+
+# Default target
+all: build
+
+# Build the project
+build:
+	@echo "🔨 Building Blockfrost SDK..."
+	lake build
+
+# Run all tests
+test: build
+	@echo "🧪 Running all tests..."
+	./.lake/build/bin/demo
+
+# Quick health check
+health: build
+	@echo "🏥 Running health check..."
+	./.lake/build/bin/demo health
+
+# Run network tests
+network: build
+	@echo "🌐 Running network tests..."
+	./.lake/build/bin/demo network
+
+# Run account tests  
+accounts: build
+	@echo "👤 Running account tests..."
+	./.lake/build/bin/demo accounts
+
+# Run demo examples
+demo: build
+	@echo "🚀 Running demo examples..."
+	lean --run Examples/Demo.lean
+
+# Check if environment is set up
+check:
+	@echo "🔍 Checking environment..."
+	@if [ -z "$$BLOCKFROST_PROJECT_ID" ]; then \
+		echo "❌ BLOCKFROST_PROJECT_ID environment variable not set"; \
+		echo "   Please set it with: export BLOCKFROST_PROJECT_ID=your_project_id"; \
+		exit 1; \
+	else \
+		echo "✅ BLOCKFROST_PROJECT_ID is set"; \
+	fi
+	@echo "✅ Environment check passed"
+
+# Clean build artifacts
+clean:
+	@echo "🧹 Cleaning build artifacts..."
+	lake clean
+
+# Setup development environment
+setup:
+	@echo "⚙️ Setting up development environment..."
+	@echo "Make sure you have:"
+	@echo "  - Lean 4 installed"
+	@echo "  - libcurl development headers"
+	@echo "  - A Blockfrost project ID from https://blockfrost.io"
+	@echo ""
+	@echo "Then run: export BLOCKFROST_PROJECT_ID=your_project_id"
+
+# Show help
+help:
+	@echo "Blockfrost Lean4 SDK - Available commands:"
+	@echo ""
+	@echo "🔨 Build:"
+	@echo "  make build     - Build the project"
+	@echo "  make clean     - Clean build artifacts"
+	@echo ""
+	@echo "🧪 Testing:"
+	@echo "  make test      - Run all tests"
+	@echo "  make health    - Run health check only"
+	@echo "  make network   - Run network tests only"  
+	@echo "  make accounts  - Run account tests only"
+	@echo ""
+	@echo "🚀 Demo:"
+	@echo "  make demo      - Run example usage"
+	@echo "  make check     - Check environment setup"
+	@echo ""
+	@echo "📚 Help:"
+	@echo "  make help      - Show this help"
+	@echo "  make setup     - Show setup instructions"
+
+# Quick start (check environment then run health test)
+start: check health
+	@echo "🎉 Quick start completed successfully!"
+	@echo "Try running 'make test' to run the full test suite"
+</file>
+
+<file path="Blockfrost/Endpoints/Accounts.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+
+namespace accounts
+  -- GET /accounts/{stake_address}
+  @[inline] def byStake (stake : String) : Path :=
+    root.seg "accounts" |>.seg stake
+
+  -- GET /accounts/{stake_address}/rewards
+  @[inline] def rewards (stake : String) : Path :=
+    byStake stake |>.seg "rewards"
+
+  -- GET /accounts/{stake_address}/history
+  @[inline] def history (stake : String) : Path :=
+    byStake stake |>.seg "history"
+
+  -- GET /accounts/{stake_address}/delegations
+  @[inline] def delegations (stake : String) : Path :=
+    byStake stake |>.seg "delegations"
+
+  -- GET /accounts/{stake_address}/registrations
+  @[inline] def registrations (stake : String) : Path :=
+    byStake stake |>.seg "registrations"
+
+  -- GET /accounts/{stake_address}/withdrawals
+  @[inline] def withdrawals (stake : String) : Path :=
+    byStake stake |>.seg "withdrawals"
+
+  -- GET /accounts/{stake_address}/mirs
+  @[inline] def mirs (stake : String) : Path :=
+    byStake stake |>.seg "mirs"
+
+  -- GET /accounts/{stake_address}/addresses
+  @[inline] def addresses (stake : String) : Path :=
+    byStake stake |>.seg "addresses"
+
+  namespace addresses
+    -- GET /accounts/{stake_address}/addresses/assets
+    @[inline] def assets (stake : String) : Path :=
+      byStake stake |>.seg "addresses" |>.seg "assets"
+
+    -- GET /accounts/{stake_address}/addresses/total
+    @[inline] def total (stake : String) : Path :=
+      byStake stake |>.seg "addresses" |>.seg "total"
+  end addresses
+
+  -- GET /accounts/{stake_address}/utxos
+  @[inline] def utxos (stake : String) : Path :=
+    byStake stake |>.seg "utxos"
+
+end accounts
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Addresses.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+
+namespace addresses
+  -- GET /addresses/{address}
+  @[inline] def byAddress (addr : String) : Path :=
+    root.seg "addresses" |>.seg addr
+
+  -- GET /addresses/{address}/extended
+  @[inline] def extended (addr : String) : Path :=
+    byAddress addr |>.seg "extended"
+
+  -- GET /addresses/{address}/total
+  @[inline] def total (addr : String) : Path :=
+    byAddress addr |>.seg "total"
+
+  -- GET /addresses/{address}/utxos
+  @[inline] def utxos (addr : String) : Path :=
+    byAddress addr |>.seg "utxos"
+
+  namespace utxos
+    -- GET /addresses/{address}/utxos/assets
+    @[inline] def byAsset (addr : String) (asset : String) : Path :=
+      byAddress addr |>.seg "utxos" |>.seg asset
+  end utxos
+
+  -- GET /addresses/{address}/txs (deprecated)
+  @[inline] def txs (addr : String) : Path :=
+    byAddress addr |>.seg "txs"
+
+  -- GET /addresses/{address}/transactions
+  @[inline] def transactions (addr : String) : Path :=
+    byAddress addr |>.seg "transactions"
+end addresses
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Assets.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /assets
+  @[inline] def assets : Path := Blockfrost.root.seg "assets"
+
+  namespace assets
+    -- GET /assets/{asset}
+    @[inline] def byAsset (h : String) : Path := assets.seg h
+
+    -- GET /assets/{asset}/history
+    @[inline] def history (h : String) : Path := byAsset h |>.seg "history"
+    -- GET /assets/{asset}/txs (deprecated)
+
+    -- GET /assets/{asset}/transactions
+    @[inline] def transactions (h : String) : Path := byAsset h |>.seg "transactions"
+
+    -- GET /assets/{asset}/addresses
+    @[inline] def addresses (h : String) : Path := byAsset h |>.seg "addresses"
+
+    namespace policy
+      -- GET /assets/policy/{policy_id}
+      @[inline] def byPolicy (p : String) : Path := assets.seg "policy" |>.seg p
+
+    end policy
+  end assets
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Metadata.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- Private as this is not a real API endpoint
+  private def metadata_root : Path := Blockfrost.root.seg "metadata"
+  namespace metadata
+    namespace txs
+      -- GET /metadata/txs/labels
+      @[inline] def labels : Path := metadata_root.seg "txs" |>.seg "labels"
+
+      namespace labels
+        -- GET /metadata/txs/labels/{label}
+        @[inline] def byLabel (label : String) : Path := labels.seg label
+
+        -- GET /metadata/txs/labels/{label}/cbor
+        @[inline] def cbor (label : String) : Path := byLabel label |>.seg "cbor"
+      end labels
+    end txs
+  end metadata
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Endpoints/Pools.lean">
+import Blockfrost.Path
+import Blockfrost.Endpoints.Root
+
+namespace Blockfrost
+  -- GET /pools
+  @[inline] def pools : Path := Blockfrost.root.seg "pools"
+
+  namespace pools
+    -- GET /pools/extended
+    @[inline] def extended : Path := pools.seg "extended"
+
+    -- GET /pools/retired
+    @[inline] def retired : Path := pools.seg "retired"
+
+    -- GET /pools/retiring
+    @[inline] def retiring : Path := pools.seg "retiring"
+    -- GET /pools/{pool_id}
+    @[inline] def byId (pool_id : String) : Path := pools.seg pool_id
+
+    -- GET /pools/{pool_id}/history
+    @[inline] def history (pool_id : String) : Path := byId pool_id |>.seg "history"
+
+    -- GET /pools/{pool_id}/metadata
+    @[inline] def metadata (pool_id : String) : Path := byId pool_id |>.seg "metadata"
+
+    -- GET /pools/{pool_id}/relays
+    @[inline] def relays (pool_id : String) : Path := byId pool_id |>.seg "relays"
+
+    -- GET /pools/{pool_id}/delegators
+    @[inline] def delegators (pool_id : String) : Path := byId pool_id |>.seg "delegators"
+
+    -- GET /pools/{pool_id}/blocks
+    @[inline] def blocks (pool_id : String) : Path := byId pool_id |>.seg "blocks"
+
+    -- GET /pools/{pool_id}/updates
+    @[inline] def updates (pool_id : String) : Path := byId pool_id |>.seg "updates"
+
+    -- GET /pools/{pool_id}/votes
+    @[inline] def votes (pool_id : String) : Path := byId pool_id |>.seg "votes"
+  end pools
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Ledger.lean">
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Common
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+-- GET /genesis
+structure BFGenesis where
+  active_slots_coefficient : Float
+  update_quorum : Int
+  max_lovelace_supply : String
+  network_magic : Int
+  epoch_length : Int
+  system_start : Int
+  slots_per_kes_period : Int
+  slot_length : Int
+  max_kes_evolutions : Int
+  security_param : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFGenesis where
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Metrics.lean">
+import Lean.Data.Json
+import Blockfrost.Utils
+import Blockfrost.Models.Derive
+
+
+open Blockfrost.Utils
+
+namespace Blockfrost
+
+-- Get /metrics
+structure BFMetrics where
+  time : Nat
+  calls : Nat
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFMetrics where
+
+-- GET /metrics/endpoints
+structure BFEndpoints where
+  time : Nat
+  calls : Nat
+  endpoint : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFEndpoints where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Pools.lean">
+import Lean.Data.Json
+-- import Blockfrost.Models.Common
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+
+-- GET /pools
+abbrev BFPoolListElem := String
+
+-- GET /pools/extended
+structure BFPoolMetadata where
+  url? : Option String := none
+  hash? : Option String := none
+  ticker? : Option String := none
+  name? : Option String := none
+  description? : Option String := none
+  homepage? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolMetadata where
+
+structure BFPoolExtended where
+  pool_id : String
+  hex : String
+  active_stake : String
+  live_stake : String
+  live_saturation : Float
+  blocks_minted : Int
+  declared_pledge : String
+  margin_cost : Float
+  fixed_cost : String
+  metadata : BFPoolMetadata
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolExtended where
+
+-- GET /pools/retired /pools/retiring
+structure BFPoolRetired where
+  pool_id : String
+  epoch : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolRetired where
+
+-- GET /pools/{pool_id}
+structure BFCalidusKey where
+  id : String
+  pub_key : String
+  nonce : Int
+  tx_hash : String
+  block_height : Int
+  block_time : Int
+  epoch : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFCalidusKey where
+
+structure BFPoolInfo where
+  pool_id : String
+  hex : String
+  vrf_key : String
+  blocks_minted : Int
+  blocks_epoch : Int
+  live_stake : String
+  live_size : Float
+  live_saturation : Float
+  live_delegators : Nat
+  active_stake : String
+  active_size : Float
+  declared_pledge : String
+  live_pledge : String
+  margin_cost : Float
+  fixed_cost : String
+  reward_account : String
+  owners : List String
+  registration : List String
+  retirement : List String
+  calidus_key? : Option BFCalidusKey := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolInfo where
+
+-- GET /pools/{pool_id}/history
+structure BFPoolHistory where
+  epoch : Int
+  blocks : Int
+  active_stake : String
+  active_size : Float
+  delegators_count : Int
+  rewards : String
+  fees : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolHistory where
+
+-- GET /pools/{pool_id}/metadata
+abbrev BFPoolMetadataInfo := Lean.Json
+instance : PrettyToString BFPoolMetadataInfo where
+
+-- GET /pools/{pool_id}/relays
+structure BFPoolRelay where
+  ipv4? : Option String := none
+  ipv6? : Option String := none
+  dns? : Option String := none
+  dns_srv? : Option String := none
+  port : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolRelay where
+
+-- GET /pools/{pool_id}/delegators
+structure BFPoolDelegator where
+  address : String
+  live_stake : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolDelegator where
+
+-- GET /pools/{pool_id}/blocks
+abbrev BFPoolBlock := String
+
+-- GET /pools/{pool_id}/updates
+structure BFPoolUpdate where
+  tx_hash : String
+  cert_index : Int
+  action : String -- TODO: enum?
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolUpdate where
+
+-- GET /pools/{pool_id}/votes
+structure BFPoolVote where
+  tx_hash : String
+  cert_index : Int
+  vote : String -- TODO: enum?
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFPoolVote where
+</file>
+
+<file path="Blockfrost/Models/Root.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+
+-- GET root
+structure BFRoot where
+  url : String
+  version : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFRoot where
+
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Scripts.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Common
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+
+/-- GET /scripts -/
+structure BFScript where
+  script_hash : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScript where
+
+/-- GET /scripts/{script_hash} -/
+structure BFScriptInfo where
+  script_hash : String
+  type : String -- TODO: enum?
+  serialized_size? : Option Int := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScriptInfo where
+
+-- GET /scripts/{script_hash}/json
+structure BFScriptJson where
+  json : Lean.Json -- inductive of several types
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScriptJson where
+
+-- GET /scripts/{script_hash}/cbor
+structure BFScriptCbor where
+  cbor? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScriptCbor where
+
+-- GET /scripts/{script_hash}/redeemers
+structure BFScriptRedeemer where
+  tx_hash : String
+  tx_index : Int
+  purpose : String -- TODO: enum?
+  redeemer_data_hash : String
+  datum_hash? : Option String := none -- (deprecated)
+  unit_mem : String
+  unit_steps : String
+  fee : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScriptRedeemer where
+
+-- GET /scripts/datum/{datum_hash}
+structure BFScriptDatum where
+  json_value : Lean.Json
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScriptDatum where
+
+-- GET /scripts/datum/{datum_hash}/cbor
+structure BFScriptDatumCbor where
+  cbor : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFScriptDatumCbor where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Typed/Common.lean">
+import Blockfrost.Path
+namespace Blockfrost.Typed
+
+/-- Standard list/pagination parameters used by many endpoints. -/
+structure ListParams where
+  count? : Option Nat := none   -- default 100
+  page?  : Option Nat := none   -- default 1
+  order? : Option String := none -- "asc" | "desc"
+  from?  : Option Nat := none    -- endpoint-specific meaning (e.g., epoch)
+  to?    : Option Nat := none
+
+instance : Inhabited ListParams where
+  default := { count? := some 100, page? := some 1, order? := "asc", from? := none, to? := none }
+
+def withParams (lp : ListParams) (p : Blockfrost.Path) : Blockfrost.Path :=
+  let p := match lp.count? with | some v => p.q "count" (toString v) | none => p
+  let p := match lp.page?  with | some v => p.q "page"  (toString v) | none => p
+  let p := match lp.order? with | some v => p.q "order" v               | none => p
+  let p := match lp.from?  with | some v => p.q "from"  (toString v)    | none => p
+  let p := match lp.to?    with | some v => p.q "to"    (toString v)    | none => p
+  p
+
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Health.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+-- /health
+def health : BF (Except BFApiError BFHealth) :=
+  Blockfrost.health.getJsonM (α := BFHealth)
+
+namespace health
+  -- /health/clock
+  def clock : BF (Except BFApiError BFClock) :=
+    Blockfrost.health.clock.getJsonM (α := BFClock)
+end health
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Mempool.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+-- GET /mempool
+def mempool : BF (Except BFApiError (List BFMempool)) :=
+  Blockfrost.mempool.getJsonM (α := (List BFMempool))
+
+namespace mempool
+  -- GET /mempool/{hash}
+  def byHash (hash : String) : BF (Except BFApiError BFMempoolTxInfo) :=
+    Blockfrost.mempool.byHash hash |>.getJsonM (α := BFMempoolTxInfo)
+  namespace addresses
+    def byAddress (address : String) : BF (Except BFApiError BFMempool) :=
+      Blockfrost.mempool.addresses.byAddress address |>.getJsonM (α := BFMempool)
+  end addresses
+end mempool
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Root.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+-- /root
+def root : BF (Except BFApiError BFRoot) :=
+  Blockfrost.root.getJsonM (α := BFRoot)
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Scripts.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+  -- GET /scripts
+def scripts : BF (Except BFApiError (List BFScript)) :=
+  Blockfrost.scripts.getJsonM (α := List BFScript)
+namespace scripts
+  -- GET /scripts/{hash}
+  def byHash (hash : String) : BF (Except BFApiError BFScript) :=
+    Blockfrost.scripts.byHash hash |>.getJsonM (α := BFScript)
+
+  -- GET /scripts/{hash}/json
+  def json (hash : String) : BF (Except BFApiError BFScriptJson) :=
+    Blockfrost.scripts.json hash |>.getJsonM (α := BFScriptJson)
+
+  -- GET /scripts/{hash}/cbor
+  def cbor (hash : String) : BF (Except BFApiError BFScriptCbor) :=
+    Blockfrost.scripts.cbor hash |>.getJsonM (α := BFScriptCbor)
+
+  -- GET /scripts/{hash}/redeemers
+  def redeemers (hash : String) : BF (Except BFApiError (List BFScriptRedeemer)) :=
+    Blockfrost.scripts.redeemers hash |>.getJsonM (α := List BFScriptRedeemer)
+
+  namespace datum
+  -- GET /scripts/datum/{datum_hash}
+  def byHash (datum_hash : String) : BF (Except BFApiError BFScriptDatum) :=
+    Blockfrost.scripts.datum.byDatumHash datum_hash |>.getJsonM (α := BFScriptDatum)
+
+    -- GET /scripts/datum/{datum_hash}/cbor
+    def cbor (datum_hash : String) : BF (Except BFApiError BFScriptDatumCbor) :=
+      Blockfrost.scripts.datum.cbor datum_hash |>.getJsonM (α := BFScriptDatumCbor)
+  end datum
+end scripts
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Client.lean">
+-- Blockfrost/Client.lean
+import CurlFFI.Curl
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+
+open Lean Curl
+
+namespace Blockfrost
+
+inductive Network where
+  | mainnet
+  | preprod
+  | preview
+  | custom (url : String)
+deriving Inhabited, Repr, FromJson, ToJson
+
+instance : ToString Network where
+  toString
+    | .mainnet  => "mainnet"
+    | .preprod  => "preprod"
+    | .preview  => "preview"
+    | .custom s => s
+
+/-- Supported Cardano network bases (pass a full URL here if you want custom). -/
+def baseOfNetwork : Network → String
+  | .mainnet  => "https://cardano-mainnet.blockfrost.io/api/v0"
+  | .preprod  => "https://cardano-preprod.blockfrost.io/api/v0"
+  | .preview  => "https://cardano-preview.blockfrost.io/api/v0"
+  | .custom s => s
+
+@[inline] def authHeaders (projectId : String) : Array (String × String) :=
+  #[(("project_id"), projectId)]
+
+/-- GET + parse JSON straight into a Lean value via `FromJson`. -/
+def getJson [FromJson α]
+    (base : String) (path : String) (projectId : String) : IO α := do
+  let url := base ++ path
+  let body ← Curl.curlGetWithHeaders url (authHeaders projectId)
+  match Json.parse body with
+  | .error e =>
+      throw <| IO.userError s!"Blockfrost: invalid JSON at {path}: {e}\nBody:\n{body}"
+  | .ok j =>
+    match fromJson? (α := α) j with
+    | .ok x      => pure x
+    | .error err =>
+      throw <| IO.userError s!"Blockfrost: decode error at {path}: {err}\nBody:\n{body}"
+
+/-- Convenience wrapper that reads BLOCKFROST_PROJECT_ID from the env. -/
+def getJsonWithEnv [FromJson α]
+    (base : String) (path : String) : IO α := do
+  let some pid ← IO.getEnv "BLOCKFROST_PROJECT_ID"
+    | throw <| IO.userError "Set BLOCKFROST_PROJECT_ID in your environment."
+  getJson (α := α) base path pid
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Path.lean">
+import Blockfrost.Env
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+
+namespace Blockfrost
+
+structure Path where
+  segs : Array String := #[]
+  qs   : Array (String × String) := #[]
+deriving Repr
+
+@[inline] def Path.seg (p : Path) (s : String) : Path := { p with segs := p.segs.push s }
+@[inline] def Path.q   (p : Path) (k v : String) : Path := { p with qs := p.qs.push (k, v) }
+
+/-- Finalizers that *use* the BF monad (no explicit client arg). -/
+def Path.getStringM (p : Path) : BF String :=
+  Blockfrost.getStringM p.segs p.qs
+
+def Path.getJsonM [Lean.FromJson α] (p : Path) : BF (Except Blockfrost.Models.BFApiError α) :=
+  Blockfrost.getJsonM (α := α) p.segs p.qs
+
+end Blockfrost
+</file>
+
+<file path="CurlFFI/Curl.lean">
+namespace Curl
+
+@[extern "lcurl_get"]
+opaque curlGet (url : @& String) : IO String
+
+@[extern "lcurl_get_with_headers"]
+opaque curlGetWithHeaders (url : @& String) (headers : @& Array (String × String)) : IO String
+
+/-- Stream response to a file (binary-safe). -/
+@[extern "lcurl_get_to_file_with_headers"]
+opaque curlGetToFileWithHeaders
+  (url : @& String)
+  (headers : @& Array (String × String))
+  (path : @& String)
+  : IO Unit
+
+end Curl
+</file>
+
+<file path="Blockfrost/Endpoints/Endpoints.lean">
+import Blockfrost.Path
+import Blockfrost.Models.Models
+
+import Blockfrost.Endpoints.Accounts
+import Blockfrost.Endpoints.Addresses
+import Blockfrost.Endpoints.Assets
+import Blockfrost.Endpoints.Blocks
+import Blockfrost.Endpoints.Epochs
+import Blockfrost.Endpoints.Governance
+import Blockfrost.Endpoints.Health
+import Blockfrost.Endpoints.Ledger
+import Blockfrost.Endpoints.Mempool
+import Blockfrost.Endpoints.Metadata
+import Blockfrost.Endpoints.Metrics
+import Blockfrost.Endpoints.Network
+import Blockfrost.Endpoints.Pools
+import Blockfrost.Endpoints.Root
+import Blockfrost.Endpoints.Scripts
+import Blockfrost.Endpoints.Transactions
+</file>
+
+<file path="Blockfrost/Models/Common.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+  instance : Repr Lean.Json where
+    reprPrec j _ := Lean.Json.pretty j
+
+structure BFValue where
+  unit : String
+  quantity : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFValue where
+
+structure BFTransaction where
+  tx_hash : String
+  tx_index : Int
+  block_height : Int
+  block_time : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTransaction where
+
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Health.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+
+namespace Blockfrost.Models
+
+-- GET /
+structure BFRoot where
+  url : String
+  version : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFRoot where
+
+-- GET /health
+structure BFHealth where
+  is_healthy : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFHealth where
+
+-- Get /health/clock
+structure BFClock where
+  server_time : Nat
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFClock where
+
+end Blockfrost.Models
+</file>
+
+<file path="Blockfrost/Typed/Metadata.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace metadata
+  namespace txs
+    -- GET /metadata/txs/labels
+    @[inline] def labels : BF (Except BFApiError (List BFMetadataTxsLabels)) :=
+      Blockfrost.metadata.txs.labels.getJsonM (α := List BFMetadataTxsLabels)
+
+    namespace labels
+      -- GET /metadata/txs/labels/{label}
+      def byLabel (label : String) : BF (Except BFApiError (List BFMetadataTxsLabelsDetail)) :=
+        Blockfrost.metadata.txs.labels.byLabel label |>.getJsonM (α := List BFMetadataTxsLabelsDetail)
+
+      -- GET /metadata/txs/labels/{label}/cbor
+      def cbor (label : String) : BF (Except BFApiError (List BFMetadataTxsLabelsCbor)) :=
+        Blockfrost.metadata.txs.labels.cbor label |>.getJsonM (α := List BFMetadataTxsLabelsCbor)
+    end labels
+  end txs
+end metadata
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Pool.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+-- GET /pools
+def pools : BF (Except BFApiError (List BFPoolListElem)) :=
+  Blockfrost.pools.getJsonM (α := List BFPoolListElem)
+
+namespace pools
+  -- GET /pools/extended
+  def extended : BF (Except BFApiError (List BFPoolExtended)) :=
+    Blockfrost.pools.extended.getJsonM (α := List BFPoolExtended)
+
+  -- GET /pools/retired
+  def retired : BF (Except BFApiError (List BFPoolRetired)) :=
+    Blockfrost.pools.retired.getJsonM (α := List BFPoolRetired)
+
+  -- GET /pools/retiring
+  def retiring : BF (Except BFApiError (List BFPoolRetired)) :=
+    Blockfrost.pools.retiring.getJsonM (α := List BFPoolRetired)
+
+  -- GET /pools/{pool_id}
+  def byId (poolId : String) : BF (Except BFApiError BFPoolInfo) :=
+    Blockfrost.pools.byId poolId |>.getJsonM (α := BFPoolInfo)
+
+  -- GET /pools/{pool_id}/history
+  def history (poolId : String) : BF (Except BFApiError (List BFPoolHistory)) :=
+    Blockfrost.pools.history poolId |>.getJsonM (α := List BFPoolHistory)
+
+  -- GET /pools/{pool_id}/metadata
+  def metadata (poolId : String) : BF (Except BFApiError BFPoolMetadata) :=
+    Blockfrost.pools.metadata poolId |>.getJsonM (α := BFPoolMetadata)
+
+  -- GET /pools/{pool_id}/relays
+  def relays (poolId : String) : BF (Except BFApiError (List BFPoolRelay)) :=
+    Blockfrost.pools.relays poolId |>.getJsonM (α := List BFPoolRelay)
+
+  -- GET /pools/{pool_id}/delegators
+  def delegators (poolId : String) : BF (Except BFApiError (List BFPoolDelegator)) :=
+    Blockfrost.pools.delegators poolId |>.getJsonM (α := List BFPoolDelegator)
+
+  -- GET /pools/{pool_id}/blocks
+  def blocks (poolId : String) : BF (Except BFApiError (List BFPoolBlock)) :=
+    Blockfrost.pools.blocks poolId |>.getJsonM (α := List BFPoolBlock)
+
+  -- GET /pools/{pool_id}/updates
+  def updates (poolId : String) : BF (Except BFApiError (List BFPoolUpdate)) :=
+    Blockfrost.pools.updates poolId |>.getJsonM (α := List BFPoolUpdate)
+
+  -- GET /pools/{pool_id}/votes
+  def votes (poolId : String) : BF (Except BFApiError (List BFPoolVote)) :=
+    Blockfrost.pools.votes poolId |>.getJsonM (α := List BFPoolVote)
+end pools
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Transactions.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace txs
+  -- GET /txs
+  def byHash (h : String) : BF (Except BFApiError BFTx) :=
+    Blockfrost.txs.byHash h |>.getJsonM (α := BFTx)
+
+  -- GET /txs/{hash}/utxos
+  def utxos (h : String) : BF (Except BFApiError (BFTxUtxo)) :=
+    Blockfrost.txs.utxos h |>.getJsonM (α := BFTxUtxo)
+
+  -- GET /txs/{hash}/stakes
+  def stakes (h : String) : BF (Except BFApiError (List BFTxStake)) :=
+    Blockfrost.txs.stakes h |>.getJsonM (α := List BFTxStake)
+
+  -- GET /txs/{hash}/delegations
+  def delegations (h : String) : BF (Except BFApiError (List BFTxDelegation)) :=
+    Blockfrost.txs.delegations h |>.getJsonM (α := List BFTxDelegation)
+
+  -- GET /txs/{hash}/withdrawals
+  def withdrawals (h : String) : BF (Except BFApiError (List BFTxWithdrawal)) :=
+    Blockfrost.txs.withdrawals h |>.getJsonM (α := List BFTxWithdrawal)
+
+  -- GET /txs/{hash}/mirs
+  def mirs (h : String) : BF (Except BFApiError (List BFTxMir)) :=
+    Blockfrost.txs.mirs h |>.getJsonM (α := List BFTxMir)
+
+  -- GET /txs/{hash}/pool_updates
+  def poolUpdates (h : String) : BF (Except BFApiError (List BFTxPoolUpdate)) :=
+    Blockfrost.txs.poolUpdates h |>.getJsonM (α := List BFTxPoolUpdate)
+
+  -- GET /txs/{hash}/pool_retires
+  def poolRetires (h : String) : BF (Except BFApiError (List BFTxPoolRetire)) :=
+    Blockfrost.txs.poolRetires h |>.getJsonM (α := List BFTxPoolRetire)
+
+  -- GET /txs/{hash}/metadata
+  def metadata (h : String) : BF (Except BFApiError (List BFTxMetadata)) :=
+    Blockfrost.txs.metadata h |>.getJsonM (α := List BFTxMetadata)
+
+  namespace metadata
+    -- GET /txs/{hash}/metadata/cbor
+    def cbor (h : String) : BF (Except BFApiError (List BFTxMetadataCbor)) :=
+      Blockfrost.txs.metadata.cbor h |>.getJsonM (α := List BFTxMetadataCbor)
+  end metadata
+
+  -- GET /txs/{hash}/redeemers
+  def redeemers (h : String) : BF (Except BFApiError (List BFTxRedeemer)) :=
+    Blockfrost.txs.redeemers h |>.getJsonM (α := List BFTxRedeemer)
+
+  -- GET /txs/{hash}/required_signers
+  def requiredSigners (h : String) : BF (Except BFApiError (List BFTxRequiredSigner)) :=
+    Blockfrost.txs.requiredSigners h |>.getJsonM (α := List BFTxRequiredSigner)
+
+  -- GET /txs/{hash}/cbor
+  def cbor (h : String) : BF (Except BFApiError BFTxCbor) :=
+    Blockfrost.txs.cbor h |>.getJsonM (α := BFTxCbor)
+
+  -- POST /txs/submit
+  -- def submit : BF (Except BFApiError BFTxSubmitResponse) :=
+  --   Blockfrost.txs.submit.postJsonM (α := BFTxSubmitResponse)
+end txs
+
+end Blockfrost.Typed
+</file>
+
+<file path="c/http_client.c">
+// c/http_client.c
+#include <lean/lean.h>
+#include <curl/curl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+/* -------- simple growable buffer for response body -------- */
+typedef struct {
+    char*  data;
+    size_t size;
+    size_t cap;
+} buf_t;
+
+static void buf_init(buf_t* b) {
+    b->data = (char*)malloc(1);
+    if (!b->data) { b->size = b->cap = 0; return; }
+    b->data[0] = '\0';
+    b->size = 0;
+    b->cap  = 1;
+}
+
+static int buf_grow(buf_t* b, size_t add) {
+    if (b->size + add + 1 <= b->cap) return 1;
+    size_t need = b->size + add + 1;
+    size_t newCap = b->cap * 2;
+    if (newCap < need) newCap = need;
+    char* p = (char*)realloc(b->data, newCap);
+    if (!p) return 0;
+    b->data = p;
+    b->cap  = newCap;
+    return 1;
+}
+
+static size_t write_cb(char* ptr, size_t size, size_t nmemb, void* userdata) {
+    size_t n = size * nmemb;
+    buf_t* b = (buf_t*)userdata;
+    if (!buf_grow(b, n)) return 0; // signal error to libcurl
+    memcpy(b->data + b->size, ptr, n);
+    b->size += n;
+    b->data[b->size] = '\0';
+    return n;
+}
+
+/* -------- helper to build curl_slist from Array (String×String) -------- */
+static struct curl_slist* build_headers_from_array(lean_obj_arg hdrs) {
+    size_t n = lean_array_size(hdrs);
+    struct curl_slist* list = NULL;
+    for (size_t i = 0; i < n; ++i) {
+        lean_obj_arg pair = lean_array_uget(hdrs, i);
+        lean_obj_arg k = lean_ctor_get(pair, 0);
+        lean_obj_arg v = lean_ctor_get(pair, 1);
+        const char* ck = lean_string_cstr(k);
+        const char* cv = lean_string_cstr(v);
+
+        size_t lk = strlen(ck), lv = strlen(cv);
+        char* line = (char*)malloc(lk + 2 + lv + 1); // "k: v\0"
+        if (!line) {
+            curl_slist_free_all(list);
+            return NULL;
+        }
+        memcpy(line, ck, lk);
+        line[lk] = ':'; line[lk+1] = ' ';
+        memcpy(line + lk + 2, cv, lv);
+        line[lk + 2 + lv] = '\0';
+
+        list = curl_slist_append(list, line);
+        free(line);
+        if (!list) return NULL;
+    }
+    return list;
+}
+
+/* -------- plain GET: IO String -------- */
+LEAN_EXPORT lean_obj_res lcurl_get(lean_obj_arg url, lean_obj_arg w) {
+    const char* c_url = lean_string_cstr(url);
+    CURLcode cc = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (cc != CURLE_OK) {
+        return lean_io_result_mk_error(lean_mk_string(curl_easy_strerror(cc)));
+    }
+
+    CURL* h = curl_easy_init();
+    if (!h) {
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("curl_easy_init failed"));
+    }
+
+    buf_t b; buf_init(&b);
+    if (!b.data) {
+        curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory"));
+    }
+
+    curl_easy_setopt(h, CURLOPT_NOSIGNAL,   1L);   // safety on macOS with timeouts/threads
+    curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, ""); // enable decompression
+    curl_easy_setopt(h, CURLOPT_URL, c_url);
+    curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb);
+    curl_easy_setopt(h, CURLOPT_WRITEDATA, &b);
+    curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(h, CURLOPT_USERAGENT, "lean-curl/1.0");
+    curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(h, CURLOPT_TIMEOUT, 30L);
+
+    cc = curl_easy_perform(h);
+    if (cc != CURLE_OK) {
+        lean_obj_res err = lean_mk_string(curl_easy_strerror(cc));
+        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(err);
+    }
+
+    long status = 0;
+    curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
+
+    lean_obj_res s = lean_mk_string(b.data);
+    free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+    return lean_io_result_mk_ok(s);
+}
+
+/* -------- GET with headers: IO String -------- */
+LEAN_EXPORT lean_obj_res lcurl_get_with_headers(lean_obj_arg url, lean_obj_arg headers, lean_obj_arg w) {
+    const char* c_url = lean_string_cstr(url);
+    CURLcode cc = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (cc != CURLE_OK) {
+        return lean_io_result_mk_error(lean_mk_string(curl_easy_strerror(cc)));
+    }
+
+    CURL* h = curl_easy_init();
+    if (!h) {
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("curl_easy_init failed"));
+    }
+
+    buf_t b; buf_init(&b);
+    if (!b.data) {
+        curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory"));
+    }
+
+    struct curl_slist* hdr_list = build_headers_from_array(headers);
+    if (headers != lean_box(0) && hdr_list == NULL && lean_array_size(headers) > 0) {
+        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory building headers"));
+    }
+
+    // curl_easy_setopt(h, CURLOPT_FAILONERROR, 1L);  // treat HTTP >=400 as failure
+    curl_easy_setopt(h, CURLOPT_NOSIGNAL,   1L);   // safety on macOS with timeouts/threads
+    curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, ""); // enable decompression
+    curl_easy_setopt(h, CURLOPT_URL, c_url);
+    curl_easy_setopt(h, CURLOPT_HTTPHEADER, hdr_list);
+    curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb);
+    curl_easy_setopt(h, CURLOPT_WRITEDATA, &b);
+    curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(h, CURLOPT_USERAGENT, "lean-curl/1.0");
+    curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(h, CURLOPT_TIMEOUT, 30L);
+
+    cc = curl_easy_perform(h);
+    if (cc != CURLE_OK) {
+        lean_obj_res err = lean_mk_string(curl_easy_strerror(cc));
+        if (hdr_list) curl_slist_free_all(hdr_list);
+        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(err);
+    }
+
+    long status = 0;
+    curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
+    lean_obj_res s = lean_mk_string(b.data);
+    if (hdr_list) curl_slist_free_all(hdr_list);
+    free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+    return lean_io_result_mk_ok(s);
+}
+
+/* -------- GET with headers -> write raw bytes to a file path -------- */
+/* IO Unit curlGetToFileWithHeaders(String url, Array (String×String) headers, String path) */
+LEAN_EXPORT lean_obj_res lcurl_get_to_file_with_headers(lean_obj_arg url, lean_obj_arg headers, lean_obj_arg path, lean_obj_arg w) {
+    const char* c_url  = lean_string_cstr(url);
+    const char* c_path = lean_string_cstr(path);
+
+    CURLcode cc = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (cc != CURLE_OK)
+        return lean_io_result_mk_error(lean_mk_string(curl_easy_strerror(cc)));
+
+    FILE* f = fopen(c_path, "wb");
+    if (!f) {
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("failed to open output file"));
+    }
+
+    CURL* h = curl_easy_init();
+    if (!h) {
+        fclose(f);
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("curl_easy_init failed"));
+    }
+
+    struct curl_slist* hdr_list = build_headers_from_array(headers);
+    if (headers != lean_box(0) && hdr_list == NULL && lean_array_size(headers) > 0) {
+        curl_easy_cleanup(h); fclose(f); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory building headers"));
+    }
+
+    curl_easy_setopt(h, CURLOPT_URL, c_url);
+    curl_easy_setopt(h, CURLOPT_HTTPHEADER, hdr_list);
+    curl_easy_setopt(h, CURLOPT_WRITEDATA, f);               /* write directly to FILE* */
+    curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, NULL);         /* default fwrite */
+    curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(h, CURLOPT_USERAGENT, "lean-curl/1.0");
+    curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(h, CURLOPT_TIMEOUT, 60L);
+
+    cc = curl_easy_perform(h);
+    if (cc != CURLE_OK) {
+        lean_obj_res err = lean_mk_string(curl_easy_strerror(cc));
+        if (hdr_list) curl_slist_free_all(hdr_list);
+        curl_easy_cleanup(h); fclose(f); curl_global_cleanup();
+        return lean_io_result_mk_error(err);
+    }
+
+    long status = 0;
+    curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
+    if (hdr_list) curl_slist_free_all(hdr_list);
+    curl_easy_cleanup(h);
+    fclose(f);
+    curl_global_cleanup();
+    return lean_io_result_mk_ok(lean_box(0)); /* Unit */
+}
+</file>
+
+<file path=".gitignore">
+/.lake
+.venv
+/.vscode
+</file>
+
+<file path="lean-toolchain">
+leanprover/lean4:stable
+</file>
+
+<file path="Blockfrost/Models/Addresses.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+import Blockfrost.Models.Common
+
+namespace Blockfrost
+
+/-- GET /addresses/{address} -/
+structure BFAddressInfo where
+  address : String
+  amount  : List BFValue
+  stake_address? : Option String := none
+  type : String -- TODO: Enum type?
+  script : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAddressInfo where
+
+-- GET /addresses/{address}/extended
+structure BFUtxoAmountExtended where
+  unit     : String
+  quantity : String
+  decimals? : Option Int := none
+  has_nft_onchain_metadata : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFUtxoAmountExtended where
+
+structure BFAddressExtended where
+  address : String
+  amount : List BFUtxoAmountExtended
+  stake_address? : Option String := none
+  type : String -- TODO: Enum type?
+  script : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAddressExtended where
+
+-- GET /addresses/{address}/total
+structure BFAddressTotal where
+  address : String
+  received_sum : List BFValue
+  sent_sum : List BFValue
+  tx_count : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAddressTotal where
+
+/-- GET /addresses/{address}/utxos /addresses/{address}/utxos/{asset} -/
+structure BFUtxo where
+  address        : String
+  tx_hash        : String
+  tx_index       : Option Int := none -- (deprecated)
+  output_index   : Int
+  amount         : List BFValue
+  block          : String
+  data_hash?     : Option String := none
+  inline_datum?  : Option String := none
+  reference_script_hash? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFUtxo where
+
+-- GET /addresses/{address}/txs (deprecated)
+abbrev BFAddressTxs := String
+
+instance : PrettyToString BFAddressTxs where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Typed/Epochs.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace epochs
+  -- GET /epochs/latest
+  def latest : BF (Except BFApiError BFEpoch) :=
+    Blockfrost.epochs.latest.getJsonM (α := BFEpoch)
+
+  namespace latest
+    -- GET /epochs/latest/parameters
+    def parameters : BF (Except BFApiError BFEpochParameters) :=
+      Blockfrost.epochs.latest.parameters.getJsonM (α := BFEpochParameters)
+  end latest
+  -- GET /epochs/{epoch}
+  def byEpoch (epoch : Nat) : BF (Except BFApiError BFEpoch) :=
+    Blockfrost.epochs.byEpoch epoch |>.getJsonM (α := BFEpoch)
+
+  -- GET /epochs/{epoch}/next
+  def next (epoch : Nat) : BF (Except BFApiError (List BFEpoch)) :=
+    Blockfrost.epochs.next epoch |>.getJsonM (α := List BFEpoch)
+
+  -- GET /epochs/{epoch}/previous
+  def previous (epoch : Nat) : BF (Except BFApiError (List BFEpoch)) :=
+    Blockfrost.epochs.previous epoch |>.getJsonM (α := List BFEpoch)
+
+  -- GET /epochs/{epoch}/stakes
+  def stakes (epoch : Nat) : BF (Except BFApiError (List BFEpochStake)) :=
+    Blockfrost.epochs.stakes epoch |>.getJsonM (α := List BFEpochStake)
+
+  namespace stakes
+    -- GET /epochs/{epoch}/stakes/{pool_id}
+    def byPool (epoch : Nat) (poolId : String) : BF (Except BFApiError (List BFEpochStakeAmount)) :=
+      Blockfrost.epochs.stakes.byPool epoch poolId |>.getJsonM (α := List BFEpochStakeAmount)
+  end stakes
+
+  -- GET /epochs/{epoch}/blocks
+  def blocks (epoch : Nat) : BF (Except BFApiError (List BFEpochBlock)) :=
+    Blockfrost.epochs.blocks epoch |>.getJsonM (α := List BFEpochBlock)
+
+  namespace blocks
+    -- GET /epochs/{epoch}/blocks/{pool_id}
+    def byPool (epoch : Nat) (poolId : String) : BF (Except BFApiError (List BFEpochBlock)) :=
+      Blockfrost.epochs.blocks.byPool epoch poolId |>.getJsonM (α := List BFEpochBlock)
+  end blocks
+
+  -- GET /epochs/{epoch}/parameters
+  def parameters (epoch : Nat) : BF (Except BFApiError BFEpochParameters) :=
+    Blockfrost.epochs.parameters epoch |>.getJsonM (α := BFEpochParameters)
+
+end epochs
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Metrics.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+-- GET /metrics
+def metrics : BF (Except BFApiError (List BFMetrics)) :=
+  Blockfrost.metrics.getJsonM (α := List BFMetrics)
+
+namespace metrics
+  -- GET /metrics/endpoints
+  def endpoints : BF (Except BFApiError (List BFEndpoints)) :=
+    Blockfrost.metrics.endpoints.getJsonM (α := List BFEndpoints)
+end metrics
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Typed.lean">
+import Blockfrost.Typed.Accounts
+import Blockfrost.Typed.Addresses
+import Blockfrost.Typed.Assets
+import Blockfrost.Typed.Blocks
+-- import Blockfrost.Typed.Common
+import Blockfrost.Typed.Epochs
+import Blockfrost.Typed.Governance
+import Blockfrost.Typed.Health
+import Blockfrost.Typed.Ledger
+import Blockfrost.Typed.Mempool
+import Blockfrost.Typed.Metadata
+import Blockfrost.Typed.Metrics
+import Blockfrost.Typed.Network
+import Blockfrost.Typed.Pool
+import Blockfrost.Typed.Root
+import Blockfrost.Typed.Scripts
+import Blockfrost.Typed.Transactions
+</file>
+
+<file path="Blockfrost/Env.lean">
+import CurlFFI.Curl
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Models
+
+namespace Blockfrost
+
+structure Env where
+  base      : String
+  projectId : String
+deriving Repr
+
+inductive BFError
+  | network (msg : String)
+  | parse   (msg : String) (body : String)
+  | decode  (msg : String) (body : String)
+  | api     (status : Int) (err : String) (msg : String)
+deriving Repr
+
+instance : ToString BFError where
+  toString (e : BFError) := match e with
+    | .network msg => s!"Network error: {msg}"
+    | .parse msg body => s!"Parse error: {msg} (body: {body})"
+    | .decode msg body => s!"Decode error: {msg} (body: {body})"
+    | .api status err msg => s!"API error {status}: {err} - {msg}"
+
+abbrev BF := ReaderT Env (ExceptT BFError IO)
+
+namespace BF
+def runE (env : Env) (m : BF α) : IO (Except BFError α) :=
+  ExceptT.run (ReaderT.run m env)
+
+def run (env : Env) (m : BF α) : IO α := do
+  match (← runE env m) with
+  | .ok a      => pure a
+  | .error err => throw <| IO.userError s!"Blockfrost error: {repr err}"
+end BF
+
+@[inline] private def authHeaders (env : Env) : Array (String × String) :=
+  #[(("project_id"), env.projectId)]
+
+@[inline] private def renderUrl (base : String) (segs : Array String) (qs : Array (String × String)) : String :=
+  let path := "/" ++ String.intercalate "/" segs.toList
+  if qs.isEmpty then base ++ path
+  else
+    let q := String.intercalate "&" (qs.toList.map (fun (k,v) => s!"{k}={v}"))
+    s!"{base}{path}?{q}"
+
+def getStringM (segs : Array String) (qs : Array (String × String) := #[]) : BF String := do
+  let env ← read
+  let url := renderUrl env.base segs qs
+  let headers := authHeaders env
+
+  -- IO.println s!"[BF] GET {url}"
+  -- for (k, v) in headers do
+  --   IO.println s!"[BF]   {k}: {v}"
+
+  try
+    Curl.curlGetWithHeaders url headers
+  catch e : IO.Error =>
+    throw <| BFError.network e.toString
+
+/-- Try to decode Blockfrost error envelope (403, 404, etc.) and raise BFError.api. -/
+@[inline] private def checkApiError (body : String) : Except BFError Unit := Id.run do
+  match Lean.Json.parse body with
+  | .ok j =>
+    match Lean.fromJson? (α := Blockfrost.Models.BFApiError) j with
+    | .ok e =>
+      if e.status_code >= 400 then
+        .error <| BFError.api e.status_code e.error e.message
+      else .ok ()
+    | .error _ => .ok ()
+  | .error _ => .ok ()
+
+/-- Try to decode a Blockfrost error JSON. Returns `some` if it looks like one. -/
+@[inline] private def decodeApiError (body : String) : Option Blockfrost.Models.BFApiError :=
+  match Lean.Json.parse body with
+  | .ok j =>
+    match Lean.fromJson? (α := Blockfrost.Models.BFApiError) j with
+    | .ok e       => some e
+    | .error _    => none
+  | .error _      => none
+
+def getJsonM [Lean.FromJson α] (segs : Array String) (qs : Array (String × String) := #[]) : BF (Except Blockfrost.Models.BFApiError α) := do
+  let body ← getStringM segs qs
+
+  -- Try to decode as API error first
+  if let some apiError := decodeApiError body then
+    return .error apiError
+  else
+    -- Parse as success type
+    match Lean.Json.parse body with
+    | .error pe => throw <| BFError.parse pe body
+    | .ok j =>
+      match Lean.fromJson? (α := α) j with
+      | .ok x       => return .ok x
+      | .error derr => throw <| BFError.decode derr body
+
+end Blockfrost
+</file>
+
+<file path="Tests/TestSuite.lean">
+-- Tests/TestSuite.lean
+import Blockfrost.Env
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Typed
+
+open Blockfrost
+open Blockfrost.BF
+open Blockfrost.Models
+
+-- Test configuration
+structure TestConfig where
+  stakeAddress : String := "stake1u9ylzsgxaa6xctf4juup682ar3juj85n8tx3hthnljg47zctvm3rc"
+  addressForTest : String := "addr1q8hsff3uwtphx7dtya7unjwjwug52e5jvqp09je6pwqx8k4jvuxrw2x5rr7e258a33yzkrhhlrrc5ezvd2z7qtdq0gasme44c9"
+  assetForTest : String := "02f8fb8ec5d4d607039faca9cf1e1382fac442877fce90beb8e7218147524f57"
+  poolId : String := "pool1w7c2j0px43jmudhf48ezp7dy8j7904c9l3wc7809lhh2z026hch"
+  txHash : String := "f22edbf2bbe1157b8a08d35db65c3bfff5edeb769fa9bf6a73fe01aa2a10d87b"
+  txHashWithMetadata : String := "4fbc508044dd58217c0d9d3a368c373dd817c0f0e451a3cfee43670b3f0c3fc3"
+  scriptHash : String := "65c197d565e88a20885e535f93755682444d3c02fd44dd70883fe89e"
+  datumHash : String := "db583ad85881a96c73fbb26ab9e24d1120bb38f45385664bb9c797a2ea8d9a2d"
+  drepId : String := "drep1yg343cyuckglj48a6gpcey7fkfcy5x5f9g65wme3ne9q2mgaedmkm"
+  proposalTxHash : String := "315682855f6c1e550b7495034604a85627c264243859d2279145683316f73e58"
+  proposalTxHash2 : String := "9ba6a580bceb8f94e65a683e8291c89382835f46e3cf928eb521f5581ade4820"
+  proposalCertIndex : Nat := 0
+  metadataLabel: String := "1968"
+  policyId: String := "b863bc7369f46136ac1048adb2fa7dae3af944c3bbb2be2f216a8d4f"
+  epochForTest: Nat := 269
+  slotForTest: Nat := 30895909
+
+-- Test result type
+inductive TestResult where
+  | success (name : String) (message : String := "")
+  | failure (name : String) (error : String)
+  | skipped (name : String) (reason : String)
+
+instance : ToString TestResult where
+  toString
+  | .success name msg => s!"✅ {name}" ++ (if msg.isEmpty then "" else s!" - {msg}")
+  | .failure name err => s!"❌ {name} - {err}"
+  | .skipped name reason => s!"⏭️  {name} - {reason}"
+
+-- Helper to run a test and catch errors
+def runTest (name : String) (test : BF α) : BF TestResult := do
+  try
+    let _ ← test
+    return TestResult.success name
+  catch
+  | BFError.api status err msg => return TestResult.failure name s!"API Error {status}: {err} - {msg}"
+  | BFError.network msg => return TestResult.failure name s!"Network Error: {msg}"
+  | BFError.parse msg _ => return TestResult.failure name s!"Parse Error: {msg}"
+  | BFError.decode msg _ => return TestResult.failure name s!"Decode Error: {msg}"
+
+-- Test helper for endpoints that might be empty/unavailable
+def runTestOptional (name : String) (test : BF (Except BFApiError α)) : BF TestResult := do
+  try
+    let result ← test
+    match result with
+    | .ok _ => return TestResult.success name
+    | .error apiError =>
+      if apiError.status_code == 404 then
+        return TestResult.skipped name "No data available"
+      else
+        return TestResult.failure name s!"API Error {apiError.status_code}: {apiError.error}"
+  catch e =>
+    return TestResult.failure name s!"Exception: {e}"
+
+-- Test suites
+namespace Tests
+
+def testAccounts (config : TestConfig) : BF (List TestResult) := do
+  IO.println "🔍 Testing Accounts endpoints..."
+  let tests := [
+    ("accounts.byStake", runTestOptional "GET /accounts/{stake_address}"
+      (Blockfrost.Typed.accounts.byStake config.stakeAddress)),
+    ("accounts.rewards", runTestOptional "GET /accounts/{stake_address}/rewards"
+      (Blockfrost.Typed.accounts.rewards config.stakeAddress)),
+    ("accounts.history", runTestOptional "GET /accounts/{stake_address}/history"
+      (Blockfrost.Typed.accounts.history config.stakeAddress)),
+    ("accounts.delegations", runTestOptional "GET /accounts/{stake_address}/delegations"
+      (Blockfrost.Typed.accounts.delegations config.stakeAddress)),
+    ("accounts.registrations", runTestOptional "GET /accounts/{stake_address}/registrations"
+      (Blockfrost.Typed.accounts.registrations config.stakeAddress)),
+    ("accounts.withdrawals", runTestOptional "GET /accounts/{stake_address}/withdrawals"
+      (Blockfrost.Typed.accounts.withdrawals config.stakeAddress)),
+    ("accounts.mirs", runTestOptional "GET /accounts/{stake_address}/mirs"
+      (Blockfrost.Typed.accounts.mirs config.stakeAddress)),
+    ("accounts.addresses", runTestOptional "GET /accounts/{stake_address}/addresses"
+      (Blockfrost.Typed.accounts.addresses config.stakeAddress)),
+    ("accounts.addresses.assets", runTestOptional "GET /accounts/{stake_address}/addresses/assets"
+      (Blockfrost.Typed.accounts.addresses.assets config.stakeAddress)),
+    ("accounts.addresses.total", runTestOptional "GET /accounts/{stake_address}/addresses/total"
+      (Blockfrost.Typed.accounts.addresses.total config.stakeAddress)),
+    ("accounts.utxos", runTestOptional "GET /accounts/{stake_address}/utxos"
+      (Blockfrost.Typed.accounts.utxos config.stakeAddress))
+  ]
+
+  let results ← tests.mapM (fun (_, test) => test)
+  return results
+
+def testAddresses (config : TestConfig) : BF (List TestResult) := do
+  IO.println "🏠 Testing Addresses endpoints..."
+  let tests := [
+    runTestOptional "GET /addresses/{address}"
+      (Blockfrost.Typed.addresses.byAddress config.addressForTest),
+    runTestOptional "GET /addresses/{address}/extended"
+      (Blockfrost.Typed.addresses.extended config.addressForTest),
+    runTestOptional "GET /addresses/{address}/total"
+      (Blockfrost.Typed.addresses.total config.addressForTest),
+    runTestOptional "GET /addresses/{address}/utxos"
+      (Blockfrost.Typed.addresses.utxos config.addressForTest),
+    runTestOptional "GET /addresses/{address}/utxos/{asset}"
+      (Blockfrost.Typed.addresses.utxos.byAsset config.addressForTest config.assetForTest),
+    runTestOptional "GET /addresses/{address}/txs"
+      (Blockfrost.Typed.addresses.txs config.addressForTest),
+    runTestOptional "GET /addresses/{address}/transactions"
+      (Blockfrost.Typed.addresses.transactions config.addressForTest)
+  ]
+
+  tests.mapM id
+
+def testAssets (config : TestConfig) : BF (List TestResult) := do
+  IO.println "💎 Testing Assets endpoints..."
+  let tests := [
+    runTestOptional "GET /assets"
+      (Blockfrost.Typed.assets),
+    runTestOptional "GET /assets/{asset}"
+      (Blockfrost.Typed.assets.byAsset config.assetForTest),
+    runTestOptional "GET /assets/{asset}/history"
+      (Blockfrost.Typed.assets.history config.assetForTest),
+    runTestOptional "GET /assets/{asset}/transactions"
+      (Blockfrost.Typed.assets.transactions config.assetForTest),
+    runTestOptional "GET /assets/{asset}/addresses"
+      (Blockfrost.Typed.assets.addresses config.assetForTest),
+    runTestOptional "GET /assets/policy/{policy_id}"
+      (Blockfrost.Typed.assets.policy.byPolicy config.policyId)
+  ]
+
+  tests.mapM id
+
+def testBlocks (config : TestConfig) : BF (List TestResult) := do
+  IO.println "🧱 Testing Blocks endpoints..."
+  let tests := [
+    runTestOptional "GET /blocks/latest"
+      (Blockfrost.Typed.blocks.latest),
+    runTestOptional "GET /blocks/latest/txs"
+      (Blockfrost.Typed.blocks.latest.txs),
+    runTestOptional "GET /blocks/latest/txs/cbor"
+      (Blockfrost.Typed.blocks.latest.txs.cbor),
+    runTestOptional "GET /blocks/{hash_or_number}"
+      (Blockfrost.Typed.blocks.byHash "500"),
+    runTestOptional "GET /blocks/{hash_or_number}/next"
+      (Blockfrost.Typed.blocks.next "500"),
+    runTestOptional "GET /blocks/{hash_or_number}/previous"
+      (Blockfrost.Typed.blocks.previous "500"),
+    runTestOptional "GET /blocks/slot/{slot_number}"
+      (Blockfrost.Typed.blocks.slot.bySlot config.slotForTest),
+    runTestOptional "GET /blocks/epoch/{epoch_number}/slot/{slot_number}"
+      (Blockfrost.Typed.blocks.epoch.byEpochAndSlot 576 6810),
+    runTestOptional "GET /blocks/{hash_or_number}/txs"
+      (Blockfrost.Typed.blocks.txs "500"),
+    runTestOptional "GET /blocks/{hash_or_number}/txs/cbor"
+      (Blockfrost.Typed.blocks.txs.cbor "500"),
+    runTestOptional "GET /blocks/{hash_or_number}/addresses"
+      (Blockfrost.Typed.blocks.addresses "500")
+  ]
+
+  tests.mapM id
+
+def testEpochs (config : TestConfig): BF (List TestResult) := do
+  IO.println "📅 Testing Epochs endpoints..."
+  let tests := [
+    runTestOptional "GET /epochs/latest"
+      (Blockfrost.Typed.epochs.latest),
+    runTestOptional "GET /epochs/latest/parameters"
+      (Blockfrost.Typed.epochs.latest.parameters),
+    runTestOptional "GET /epochs/{epoch}"
+      (Blockfrost.Typed.epochs.byEpoch config.epochForTest),
+    runTestOptional "GET /epochs/{epoch}/next"
+      (Blockfrost.Typed.epochs.next config.epochForTest),
+    runTestOptional "GET /epochs/{epoch}/previous"
+      (Blockfrost.Typed.epochs.previous config.epochForTest),
+    runTestOptional "GET /epochs/{epoch}/stakes"
+      (Blockfrost.Typed.epochs.stakes config.epochForTest),
+    runTestOptional "GET /epochs/{epoch}/stakes/{pool_id}"
+      (Blockfrost.Typed.epochs.stakes.byPool config.epochForTest config.poolId),
+    runTestOptional "GET /epochs/{epoch}/blocks"
+      (Blockfrost.Typed.epochs.blocks config.epochForTest),
+    runTestOptional "GET /epochs/{epoch}/blocks/{pool_id}"
+      (Blockfrost.Typed.epochs.blocks.byPool config.epochForTest config.poolId),
+    runTestOptional "GET /epochs/{epoch}/parameters"
+      (Blockfrost.Typed.epochs.parameters config.epochForTest)
+  ]
+
+  tests.mapM id
+
+def testGovernance (config : TestConfig) : BF (List TestResult) := do
+  IO.println "🗳️  Testing Governance endpoints..."
+  let tests := [
+    runTestOptional "GET /governance/dreps"
+      (Blockfrost.Typed.governance.dreps),
+    runTestOptional "GET /governance/dreps/{drep_id}"
+      (Blockfrost.Typed.governance.dreps.byDrep config.drepId),
+    runTestOptional "GET /governance/dreps/{drep_id}/delegators"
+      (Blockfrost.Typed.governance.dreps.delegators config.drepId),
+    runTestOptional "GET /governance/dreps/{drep_id}/metadata"
+      (Blockfrost.Typed.governance.dreps.metadata config.drepId),
+    runTestOptional "GET /governance/dreps/{drep_id}/updates"
+      (Blockfrost.Typed.governance.dreps.updates config.drepId),
+    runTestOptional "GET /governance/dreps/{drep_id}/votes"
+      (Blockfrost.Typed.governance.dreps.votes config.drepId),
+    runTestOptional "GET /governance/proposals"
+      (Blockfrost.Typed.governance.proposals.root),
+    runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}"
+      (Blockfrost.Typed.governance.proposals.byTxAndCert config.proposalTxHash2 config.proposalCertIndex),
+    runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/parameters"
+      (Blockfrost.Typed.governance.proposals.parameters config.proposalTxHash2 config.proposalCertIndex),
+    runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/withdrawals"
+      (Blockfrost.Typed.governance.proposals.withdrawals config.proposalTxHash config.proposalCertIndex),
+    runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/votes"
+      (Blockfrost.Typed.governance.proposals.votes config.proposalTxHash config.proposalCertIndex),
+    runTestOptional "GET /governance/proposals/{tx_hash}/{cert_index}/metadata"
+      (Blockfrost.Typed.governance.proposals.metadata config.proposalTxHash2 config.proposalCertIndex)
+  ]
+
+  tests.mapM id
+
+def testLedger : BF (List TestResult) := do
+  IO.println "📜 Testing Ledger endpoints..."
+  let tests := [
+    runTestOptional "GET /genesis"
+      (Blockfrost.Typed.genesis)
+  ]
+  tests.mapM id
+
+def testMetadata (config : TestConfig) : BF (List TestResult) := do
+  IO.println "📄 Testing Metadata endpoints..."
+  let tests := [
+    runTestOptional "GET /metadata/txs/labels"
+      (Blockfrost.Typed.metadata.txs.labels),
+    runTestOptional "GET /metadata/txs/labels/{label}"
+      (Blockfrost.Typed.metadata.txs.labels.byLabel config.metadataLabel),
+    runTestOptional "GET /metadata/txs/labels/{label}/cbor"
+      (Blockfrost.Typed.metadata.txs.labels.cbor config.metadataLabel)
+  ]
+
+  tests.mapM id
+
+def testMetrics : BF (List TestResult) := do
+  IO.println "📈 Testing Metrics endpoints..."
+  let tests := [
+    runTestOptional "GET /metrics"
+      (Blockfrost.Typed.metrics),
+    runTestOptional "GET /metrics/endpoints"
+      (Blockfrost.Typed.metrics.endpoints)
+  ]
+
+  tests.mapM id
+
+def testRoot : BF (List TestResult) := do
+  IO.println "🌲 Testing Root endpoint..."
+  let tests := [
+    runTestOptional "GET /"
+      (Blockfrost.Typed.root)
+  ]
+
+  tests.mapM id
+
+def testScripts (config : TestConfig) : BF (List TestResult) := do
+  IO.println "📜 Testing Scripts endpoints..."
+  let tests := [
+    runTestOptional "GET /scripts"
+      (Blockfrost.Typed.scripts),
+    runTestOptional "GET /scripts/{hash}"
+      (Blockfrost.Typed.scripts.byHash config.scriptHash),
+    runTestOptional "GET /scripts/{hash}/json"
+      (Blockfrost.Typed.scripts.json config.scriptHash),
+    runTestOptional "GET /scripts/{hash}/cbor"
+      (Blockfrost.Typed.scripts.cbor config.scriptHash),
+    runTestOptional "GET /scripts/{hash}/redeemers"
+      (Blockfrost.Typed.scripts.redeemers config.scriptHash),
+    runTestOptional "GET /scripts/datum/{datum_hash}"
+      (Blockfrost.Typed.scripts.datum.byHash config.datumHash),
+    runTestOptional "GET /scripts/datum/{datum_hash}/cbor"
+      (Blockfrost.Typed.scripts.datum.cbor config.datumHash)
+  ]
+  tests.mapM id
+
+def testHealth : BF (List TestResult) := do
+  IO.println "🏥 Testing Health endpoints..."
+  let tests := [
+    runTestOptional "GET /health"
+      (Blockfrost.Typed.health),
+    runTestOptional "GET /health/clock"
+      (Blockfrost.Typed.health.clock)
+  ]
+
+  tests.mapM id
+
+def testMempool : BF (List TestResult) := do
+  IO.println "🔄 Testing Mempool endpoints..."
+  let tests := [
+    runTestOptional "GET /mempool"
+      (Blockfrost.Typed.mempool)
+  ]
+
+  tests.mapM id
+
+def testNetwork : BF (List TestResult) := do
+  IO.println "🌐 Testing Network endpoints..."
+  let tests := [
+    runTestOptional "GET /network"
+      (Blockfrost.Typed.network),
+    runTestOptional "GET /network/eras"
+      (Blockfrost.Typed.network.eras)
+  ]
+
+  tests.mapM id
+
+def testPools (config : TestConfig) : BF (List TestResult) := do
+  IO.println "🏊 Testing Pools endpoints..."
+  let tests := [
+    runTestOptional "GET /pools"
+      (Blockfrost.Typed.pools),
+    runTestOptional "GET /pools/{pool_id}"
+      (Blockfrost.Typed.pools.byId config.poolId),
+    runTestOptional "GET /pools/extended"
+      (Blockfrost.Typed.pools.extended),
+    runTestOptional "GET /pools/retired"
+      (Blockfrost.Typed.pools.retired),
+    runTestOptional "GET /pools/retiring"
+      (Blockfrost.Typed.pools.retiring),
+    runTestOptional "GET /pools/{pool_id}/history"
+      (Blockfrost.Typed.pools.history config.poolId),
+    runTestOptional "GET /pools/{pool_id}/metadata"
+      (Blockfrost.Typed.pools.metadata config.poolId),
+    runTestOptional "GET /pools/{pool_id}/relays"
+      (Blockfrost.Typed.pools.relays config.poolId),
+    runTestOptional "GET /pools/{pool_id}/delegators"
+      (Blockfrost.Typed.pools.delegators config.poolId),
+    runTestOptional "GET /pools/{pool_id}/blocks"
+      (Blockfrost.Typed.pools.blocks config.poolId),
+    runTestOptional "GET /pools/{pool_id}/updates"
+      (Blockfrost.Typed.pools.updates config.poolId),
+    runTestOptional "GET /pools/{pool_id}/votes"
+      (Blockfrost.Typed.pools.votes config.poolId)
+  ]
+
+  tests.mapM id
+
+def testTransactions (config : TestConfig) : BF (List TestResult) := do
+  IO.println "📝 Testing Transactions endpoints..."
+  let tests := [
+    runTestOptional "GET /txs/{hash}"
+      (Blockfrost.Typed.txs.byHash config.txHash),
+    runTestOptional "GET /txs/{hash}/utxos"
+      (Blockfrost.Typed.txs.utxos config.txHash),
+    runTestOptional "GET /txs/{hash}/utxos"
+      (Blockfrost.Typed.txs.utxos config.txHash),
+    runTestOptional "GET /txs/{hash}/stakes"
+      (Blockfrost.Typed.txs.stakes config.txHash),
+    runTestOptional "GET /txs/{hash}/delegations"
+      (Blockfrost.Typed.txs.delegations config.txHash),
+    runTestOptional "GET /txs/{hash}/withdrawals"
+      (Blockfrost.Typed.txs.withdrawals config.txHash),
+    runTestOptional "GET /txs/{hash}/mirs"
+      (Blockfrost.Typed.txs.mirs config.txHash),
+    runTestOptional "GET /txs/{hash}/pool_updates"
+      (Blockfrost.Typed.txs.poolUpdates config.txHash),
+    runTestOptional "GET /txs/{hash}/pool_retires"
+      (Blockfrost.Typed.txs.poolRetires config.txHash),
+    runTestOptional "GET /txs/{hash}/metadata"
+      (Blockfrost.Typed.txs.metadata config.txHash),
+    runTestOptional "GET /txs/{hash}/metadata/cbor"
+      (Blockfrost.Typed.txs.metadata.cbor config.txHashWithMetadata),
+    runTestOptional "GET /txs/{hash}/redeemers"
+      (Blockfrost.Typed.txs.redeemers config.txHash),
+    runTestOptional "GET /txs/{hash}/required_signers"
+      (Blockfrost.Typed.txs.requiredSigners config.txHash),
+    runTestOptional "GET /txs/{hash}/cbor"
+      (Blockfrost.Typed.txs.cbor config.txHash)
+  ]
+
+  tests.mapM id
+
+-- Main test runner
+def runAllTests (config : TestConfig) : BF (List TestResult) := do
+  IO.println "🚀 Starting Blockfrost API Test Suite"
+  IO.println "======================================"
+
+  let allResults ← [
+    testHealth,
+    testNetwork,
+    testAccounts config,
+    testAddresses config,
+    testAssets config,
+    testBlocks config,
+    testEpochs config,
+    testGovernance config,
+    testLedger,
+    testMetadata config,
+    testMetrics,
+    testRoot,
+    testScripts config,
+    testMempool,
+    testPools config,
+    testTransactions config
+  ].foldlM (fun acc test => do
+    let results ← test
+    return acc ++ results
+  ) []
+
+  return allResults
+
+-- Specific test suites
+def runAccountsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testAccounts config
+  for result in results do
+    IO.println result
+
+def runAddressesTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testAddresses config
+  for result in results do
+    IO.println result
+
+def runAssetsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testAssets config
+  for result in results do
+    IO.println result
+
+def runBlocksTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testBlocks config
+  for result in results do
+    IO.println result
+
+def runEpochsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testEpochs config
+  for result in results do
+    IO.println result
+
+def runGovernanceTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testGovernance config
+  for result in results do
+    IO.println result
+
+def runHealthTests : BF Unit := do
+  let results ← testHealth
+  for result in results do
+    IO.println result
+
+def runLedgerTests : BF Unit := do
+  let results ← testLedger
+  for result in results do
+    IO.println result
+
+def runMempoolTests : BF Unit := do
+  let results ← testMempool
+  for result in results do
+    IO.println result
+
+def runMetadataTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testMetadata config
+  for result in results do
+    IO.println result
+
+def runMetricsTests : BF Unit := do
+  let results ← testMetrics
+  for result in results do
+    IO.println result
+
+def runNetworkTests : BF Unit := do
+  let results ← testNetwork
+  for result in results do
+    IO.println result
+
+def runPoolTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testPools config
+  for result in results do
+    IO.println result
+
+def runRootTests : BF Unit := do
+  let results ← testRoot
+  for result in results do
+    IO.println result
+
+def runScriptsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testScripts config
+  for result in results do
+    IO.println result
+
+def runTransactionsTests : BF Unit := do
+  let config : TestConfig := {}
+  let results ← testTransactions config
+  for result in results do
+    IO.println result
+
+
+end Tests
+
+-- Print summary
+def printSummary (results : List TestResult) : IO Unit := do
+  let total := results.length
+
+  -- Count each type properly
+  let mut successes := 0
+  let mut failures := 0
+  let mut skipped := 0
+  let mut failureList : List TestResult := []
+
+  for result in results do
+    match result with
+    | .success _ _ => successes := successes + 1
+    | .failure _ _ =>
+      failures := failures + 1
+      failureList := result :: failureList
+    | .skipped _ _ => skipped := skipped + 1
+
+  IO.println ""
+  IO.println "📊 Test Summary"
+  IO.println "==============="
+  IO.println s!"Total: {total}"
+  IO.println s!"✅ Passed: {successes}"
+  IO.println s!"❌ Failed: {failures}"
+  IO.println s!"⏭️ Skipped: {skipped}"
+
+  if failures > 0 then
+    IO.println ""
+    IO.println "❌ Failures:"
+    for result in failureList.reverse do
+      IO.println s!"  {result}"
+
+-- Main test function
+def runTests : IO Unit := do
+  let some pid ← IO.getEnv "BLOCKFROST_PROJECT_ID"
+    | throw <| IO.userError "Set BLOCKFROST_PROJECT_ID"
+  let env : Env := { base := "https://cardano-mainnet.blockfrost.io/api/v0", projectId := pid }
+  let config : TestConfig := {}
+
+  BF.run env do
+    let results ← Tests.runAllTests config
+    for result in results do
+      IO.println result
+    printSummary results
+</file>
+
+<file path="lakefile.lean">
+import Lake
+open Lake DSL System
+
+package «blockfrost-lean4»
+
+lean_lib «CurlFFI»
+lean_lib «Blockfrost»
+lean_lib «Tests»
+lean_lib «Examples»
+
+-- Build the C wrapper and link with curl
+extern_lib «http_client» pkg := do
+  let name   := nameToStaticLib "http_client"
+  let cDir   := pkg.dir / "c"
+  let oDir   := pkg.buildDir / "c"
+  let src    := cDir / "http_client.c"
+  let oFile  := oDir / "http_client.o"
+  IO.FS.createDirAll oDir
+
+  let cflags := #[
+    "-fPIC", "-O2",
+    "-I", (← getLeanIncludeDir).toString,
+    "-I", "/opt/homebrew/opt/curl/include" -- Need to check where it gets otherwise
+  ]
+
+  let srcJob ← inputFile src false
+  let oJob   ← buildO oFile srcJob cflags
+  buildStaticLib (pkg.staticLibDir / name) #[oJob]
+
+@[default_target]
+lean_exe «blockfrost-test» {
+  root := `Main
+  moreLinkArgs := #[
+    "-L", "/opt/homebrew/opt/curl/lib",
+    "-lcurl",
+    "-Wl,-rpath,/opt/homebrew/opt/curl/lib"
+  ]
+}
+</file>
+
+<file path="Blockfrost/Models/Accounts.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+import Blockfrost.Models.Common
+
+namespace Blockfrost
+
+structure BFStakeAddressInfo where
+  stake_address : String
+  active : Bool
+  active_epoch? : Option Int := none
+  controlled_amount : String
+  rewards_sum : String
+  withdrawals_sum : String
+  reserves_sum : String
+  treasury_sum : String
+  withdrawable_amount : String
+  pool_id? : Option String := none
+  drep_id? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFStakeAddressInfo where
+
+structure BFAccountRewardHistoryRow where
+  epoch        : Int
+  amount       : String
+  pool_id      : String
+  type         : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountRewardHistoryRow where
+
+structure BFAccountHistory where
+  active_epoch : Int
+  amount : String
+  pool_id : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountHistory where
+
+structure BFAccountDelegation where
+  active_epoch : Int
+  tx_hash : String
+  amount : String
+  pool_id : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountDelegation where
+
+structure BFAccountRegistration where
+  tx_hash : String
+  action : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountRegistration where
+
+structure BFAccountWithdrawal where
+  tx_hash : String
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountWithdrawal where
+
+structure BFAccountMIR where
+  tx_hash : String
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountMIR where
+
+structure BFAccountAddresses where
+  address : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAccountAddresses where
+
+structure BFAddressDetailed where
+  stake_address : String
+  received_sum : List BFValue
+  sent_sum : List BFValue
+  tx_count : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAddressDetailed where
+
+structure BFAddressUtxos where
+  address : String
+  tx_hash : String
+  tx_index? : Option Int := none -- (deprecated)
+  output_index : Int
+  amount : List BFValue
+  block : String
+  data_hash? : Option String := none
+  inlined_datum? : Option String := none
+  reference_script_hash? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAddressUtxos where
+
+structure BFReward where
+  epoch : Nat
+  amount : String
+  pool_id :  String
+  type : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFReward where
+
+end  Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Assets.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Common
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+
+structure BFAssetListElement where
+  asset : String
+  quantity : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAssetListElement where
+
+/-- GET /assets/{asset} -/
+structure BFMetadata where
+  name : String
+  description : String
+  ticker : Option String := none
+  url : Option String := none
+  logo : Option String := none
+  decimals : Option Int := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMetadata where
+
+structure BFAssetInfo where
+  asset       : String
+  policy_id   : String
+  asset_name  : String
+  fingerprint : String
+  quantity    : String
+  initial_mint_tx_hash : String
+  mint_or_burn_count : Int
+  onchain_metadata? : Option Lean.Json -- Defined as "anyting"
+  onchain_metadata_standard : Option String := none -- TODO: Enum type?
+  onchain_metadata_Extra : Option String := none
+  metadata : Option BFMetadata := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFAssetInfo where
+
+-- GET /assets/{asset}/history
+structure BFAssetHistory where
+  tx_hash : String
+  action : String -- TODO: Enum type?
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFAssetHistory where
+
+-- GET /assets/{asset}/txs (deprecated)
+abbrev BFAssetTxs := String
+instance : PrettyToString BFAssetTxs where
+
+-- GET /assets/{asset}/addresses
+structure BFAssetAddresses where
+  address : String
+  quantity : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFAssetAddresses where
+
+-- GET /assets/{asset}/{policy_id}
+abbrev BFAssetPolicyId := BFAssetAddresses
+instance : PrettyToString BFAssetPolicyId where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Models.lean">
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+
+import Blockfrost.Models.Accounts
+import Blockfrost.Models.Addresses
+import Blockfrost.Models.Assets
+import Blockfrost.Models.Blocks
+import Blockfrost.Models.Epochs
+import Blockfrost.Models.Governance
+import Blockfrost.Models.Health
+import Blockfrost.Models.Ledger
+import Blockfrost.Models.Mempool
+import Blockfrost.Models.Metadata
+import Blockfrost.Models.Metrics
+import Blockfrost.Models.Network
+import Blockfrost.Models.Pools
+import Blockfrost.Models.Root
+import Blockfrost.Models.Scripts
+import Blockfrost.Models.Transactions
+
+import Blockfrost.Models.Derive
+
+
+namespace Blockfrost.Models
+
+-- API Error
+structure BFApiError where
+  status_code : Int
+  error       : String
+  message     : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFApiError where
+
+end Blockfrost.Models
+</file>
+
+<file path="Blockfrost/Models/Transactions.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+import Blockfrost.Models.Common
+
+namespace Blockfrost
+
+/-- GET /txs/{hash} -/
+structure BFTx where
+  hash   : String
+  block  : String
+  block_height : Int
+  block_time : Int
+  slot : Int
+  index : Int
+  output_amount : List BFValue
+  fees : String
+  deposit : String
+  size : Int
+  invalid_before? : Option String := none
+  invalid_hereafter? : Option String := none
+  utxo_count : Int
+  withdrawal_count : Int
+  mir_cert_count : Int
+  delegation_count : Int
+  stake_cert_count : Int
+  pool_update_count : Int
+  pool_retire_count : Int
+  asset_mint_or_burn_count : Int
+  redeemer_count : Int
+  valid_contract : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTx where
+
+/-- GET /txs/{hash}/utxos -/
+structure BFTxInput where
+  address : String
+  amount : List BFValue
+  tx_hash : String
+  output_index : Int
+  data_hash? : Option String := none
+  inline_datum? : Option String := none
+  reference_script_hash? : Option String := none
+  collateral : Bool
+  reference : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxInput where
+
+structure BFTxOutput where
+  address : String
+  amount : List BFValue
+  output_index : Int
+  data_hash? : Option String := none
+  inline_datum? : Option String := none
+  collateral : Bool
+  reference_script_hash? : Option String := none
+  consumed_by_tx? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxOutput where
+
+structure BFTxUtxo where
+  hash : String
+  inputs : List BFTxInput
+  outputs : List BFTxOutput
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxUtxo where
+
+-- GET /txs/{hash}/stakes
+structure BFTxStake where
+  cert_index : Int
+  address : String
+  registration : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxStake where
+
+-- GET /txs/{hash}/delegations
+structure BFTxDelegation where
+  index? : Option Int := none -- (deprecated)
+  cert_index : Int
+  address : String
+  pool_id : String
+  active_epoch : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxDelegation where
+
+-- GET /txs/{hash}/withdrawals
+structure BFTxWithdrawal where
+  address : String
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxWithdrawal where
+
+-- GET /txs/{hash}/mirs
+structure BFTxMir where
+  pot : String -- TODO: enum?
+  cert_index : Int
+  address : String
+  amount : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxMir where
+
+-- GET /txs/{hash}/pool_updates
+structure BFTxsPoolUpdates where
+  url? : Option String := none
+  hash? : Option String := none
+  ticker? : Option String := none
+  name? : Option String := none
+  description? : Option String := none
+  homepage? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxsPoolUpdates where
+
+structure BFRelay where
+  ipv4? : Option String := none
+  ipv6? : Option String := none
+  dns? : Option String := none
+  dns_srv? : Option String := none
+  port : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFRelay where
+
+structure BFTxPoolUpdate where
+  cert_index : Int
+  pool_id : String
+  vrf_key : String
+  pledge : String
+  margin_cost : String
+  fixed_cost : String
+  reward_account : String
+  owners : List String
+  metadata? : Option BFTxsPoolUpdates := none
+  relays? : Option (List BFRelay) := none
+  active_epoch : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxPoolUpdate where
+
+-- GET /txs/{hash}/pool_retires
+structure BFTxPoolRetire where
+  cert_index : Int
+  pool_id : String
+  retiring_epoch : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxPoolRetire where
+
+-- GET /txs/{hash}/metadata
+structure BFTxMetadata where
+  label : String
+  json_metadata : Lean.Json
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxMetadata where
+
+-- GET /txs/{hash}/metadata/cbor
+structure BFTxMetadataCbor where
+  label : String
+  cbor_metadata? : Option String := none -- (deprecated)
+  metadata : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxMetadataCbor where
+
+-- GET /txs/{hash}/redeemers
+structure BFTxRedeemer where
+  tx_index : Int
+  purpose : String -- TODO: enum?
+  script_hash : String
+  reader_data_hash : String
+  datum_hash? : Option String := none -- (deprecated)
+  unit_mem : String
+  unit_steps : String
+  fee : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxRedeemer where
+
+-- GET /txs/{hash}/required_signers
+structure BFTxRequiredSigner where
+  witness_hash : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxRequiredSigner where
+
+-- GET /txs/{hash}/cbor
+structure BFTxCbor where
+  cbor : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxCbor where
+
+-- POST /txs/submit
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Typed/Assets.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+  -- GET /assets
+  def assets: BF (Except BFApiError (List BFAssetListElement)) :=
+    Blockfrost.assets |>.getJsonM (α := List BFAssetListElement )
+
+namespace assets
+  -- GET /assets/{asset}
+  def byAsset (assetId : String) : BF (Except BFApiError BFAssetInfo) :=
+    Blockfrost.assets.byAsset assetId |>.getJsonM (α := BFAssetInfo)
+
+  -- GET /assets/{asset}/history
+  def history (assetId : String) : BF (Except BFApiError (List BFAssetHistory)) :=
+    Blockfrost.assets.history assetId |>.getJsonM (α := List BFAssetHistory)
+
+  -- GET /assets/{asset}/transactions
+  def transactions (assetId : String) : BF (Except BFApiError (List BFTransaction)) :=
+    Blockfrost.assets.transactions assetId |>.getJsonM (α := List BFTransaction)
+
+  -- GET /assets/{asset}/addresses
+  def addresses (assetId : String) : BF (Except BFApiError (List BFAssetAddresses)) :=
+    Blockfrost.assets.addresses assetId |>.getJsonM (α := List BFAssetAddresses)
+
+  namespace policy
+    -- GET /assets/policy/{policy_id}
+    def byPolicy (policyId : String) : BF (Except BFApiError (List BFAssetListElement)) :=
+      Blockfrost.assets.policy.byPolicy policyId |>.getJsonM (α := List BFAssetListElement)
+  end policy
+end assets
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Typed/Blocks.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace blocks
+  -- GET /blocks/latest
+  def latest : BF (Except BFApiError BFBlock) :=
+    Blockfrost.blocks.latest.getJsonM (α := BFBlock)
+
+  namespace latest
+    -- GET /blocks/latest/txs
+    def txs : BF (Except BFApiError (List BFBlockTxs)) :=
+      Blockfrost.blocks.latest.txs.getJsonM (α := List BFBlockTxs)
+
+    namespace txs
+      -- GET /blocks/latest/txs/cbor
+      def cbor : BF (Except BFApiError (List BFBlockTxsCBOR)) :=
+        Blockfrost.blocks.latest.txs.cbor.getJsonM (α := List BFBlockTxsCBOR)
+    end txs
+  end latest
+
+  -- GET /blocks/{hash_or_number}
+  def byHash (id : String) : BF (Except BFApiError BFBlock) :=
+    Blockfrost.blocks.byHash id |>.getJsonM (α := BFBlock)
+
+  -- GET /blocks/{hash_or_number}/next
+  def next (id : String) : BF (Except BFApiError (List BFBlock)) :=
+    Blockfrost.blocks.next id |>.getJsonM (α := List BFBlock)
+
+  -- GET /blocks/{hash_or_number}/previous
+  def previous (id : String) : BF (Except BFApiError (List BFBlock)) :=
+    Blockfrost.blocks.previous id |>.getJsonM (α := List BFBlock)
+
+  namespace slot
+    -- GET /blocks/slot/{slot_number}
+    def bySlot (n : Nat) : BF (Except BFApiError BFBlock) :=
+      Blockfrost.blocks.slot.bySlot n |>.getJsonM (α := BFBlock)
+  end slot
+
+  namespace epoch
+    -- GET /blocks/epoch/{epoch_number}/slot/{slot_number}
+    def byEpochAndSlot (e : Nat) (s : Nat) : BF (Except BFApiError BFBlock) :=
+      Blockfrost.blocks.epoch.byEpochAndSlot e s |>.getJsonM (α := BFBlock)
+  end epoch
+
+  -- GET /blocks/{hash_or_number}/txs
+  def txs (id : String) : BF (Except BFApiError (List BFBlockTxs)) :=
+    Blockfrost.blocks.txs id |>.getJsonM (α := List BFBlockTxs)
+
+  namespace txs
+    -- GET /blocks/{hash_or_number}/txs/cbor
+    def cbor (id : String) : BF (Except BFApiError (List BFBlockTxsCBOR)) :=
+      Blockfrost.blocks.txs.cbor id |>.getJsonM (α := List BFBlockTxsCBOR)
+  end txs
+
+  -- GET /blocks/{hash_or_number}/addresses
+  def addresses (id : String) : BF (Except BFApiError (List BFBlockAddresses)) :=
+    Blockfrost.blocks.addresses id |>.getJsonM (α := List BFBlockAddresses)
+end blocks
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Models/Blocks.lean">
+import Lean.Data.Json
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+
+/-- GET /blocks/latest (and /blocks/{hash_or_number}, next, previous), blocks/slot/{slot_number} -/
+structure BFBlock where
+  time : Int
+  height? : Option Int := none
+  hash : String
+  slot? : Option Int := none
+  epoch? : Option Int := none
+  epoch_slot? : Option Int := none
+  slot_leader : String
+  size : Int
+  tx_count : Int
+  output? : Option String := none
+  fees? : Option String := none
+  block_vrf? : Option String := none -- min 65 max 65, what do I do with this?
+  op_cert? : Option String := none
+  op_cert_counter? : Option String := none
+  previous_block? : Option String := none
+  next_block? : Option String := none
+  confirmations : Int
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFBlock where
+
+-- GET /blocks/latest/txs /blocks/{hash_or_number}/txs
+abbrev BFBlockTxs := String
+instance : PrettyToString BFBlockTxs where
+
+-- GET /blocks/latest/txs/cbor /blocks/{hash_or_number}/txs/cbor
+structure BFBlockTxsCBOR where
+  tx_hash : String
+  cbor : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFBlockTxsCBOR where
+
+
+/-- GET /blocks/{hash_or_number}/txs/cbor and /blocks/latest/txs/cbor -/
+structure TxHashCBOR where
+  hash : String
+  cbor : String   -- hex-encoded CBOR
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString TxHashCBOR where
+
+-- GET /blocks/{hash_or_number}/addresses
+structure BFTxHash where
+  tx_hash : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxHash where
+
+structure BFBlockAddresses where
+  address : String
+  transactions : List BFTxHash
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFBlockAddresses where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Models/Mempool.lean">
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Derive
+import Blockfrost.Models.Common
+namespace Blockfrost
+
+/-- GET /mempool/ /mempool/addresses/{address} -/
+structure BFMempool where
+  tx_hash : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMempool where
+
+structure BFMempoolTx where
+  hash : String
+  output_amount : List BFValue
+  fees : String
+  deposit : String
+  size : Int
+  invalid_before : Option String := none
+  invalid_hereafter : Option String := none
+  utxo_count : Int
+  withdrawal_count : Int
+  mir_cert_count : Int
+  delegation_count : Int
+  stake_cert_count : Int
+  pool_update_count : Int
+  pool_retire_count : Int
+  asset_mint_or_burn_count : Int
+  redeemer_count : Int
+  valid_contract : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMempoolTx where
+
+structure BFMempoolInput where
+  address : String
+  tx_hash : String
+  output_index : Int
+  collateral : Bool
+  reference : Bool
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMempoolInput where
+
+structure BFMempoolOutput where
+  address : String
+  amount : List BFValue
+  output_index : Int
+  data_hash? : Option String := none
+  inline_datum? : Option String := none
+  collateral : Bool
+  reference_script_hash? : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMempoolOutput where
+
+structure BFMempoolRedeemer where
+  tx_index : Int
+  purpose : String -- TODO: Enum type?
+  unit_mem : String
+  unit_steps : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMempoolRedeemer where
+
+structure BFMempoolTxInfo where
+  tx : BFMempoolTx
+  inputs : List BFMempoolInput
+  outputs : List BFMempoolOutput
+  redeemers? : Option (List BFMempoolRedeemer) := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFMempoolTxInfo where
+
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Typed/Accounts.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace accounts
+  -- GET /accounts/{stake_address}
+  @[inline] def byStake (stakeAddress : String) : BF (Except BFApiError BFStakeAddressInfo) :=
+    Blockfrost.accounts.byStake stakeAddress |>.getJsonM (α := BFStakeAddressInfo)
+
+  -- GET /accounts/{stake_address}/rewards
+  @[inline] def rewards (stakeAddress : String) : BF (Except BFApiError (List BFReward)) :=
+    Blockfrost.accounts.rewards stakeAddress |>.getJsonM (α := List BFReward)
+
+  -- GET /accounts/{stake_address}/history
+  @[inline] def history (stakeAddress : String) : BF (Except BFApiError (List BFAccountHistory)) :=
+    Blockfrost.accounts.history stakeAddress |>.getJsonM (α := List BFAccountHistory)
+
+  -- GET /accounts/{stake_address}/delegations
+  @[inline] def delegations (stakeAddress : String) : BF (Except BFApiError (List BFAccountDelegation)) :=
+    Blockfrost.accounts.delegations stakeAddress |>.getJsonM (α := List BFAccountDelegation)
+
+  -- GET /accounts/{stake_address}/registrations
+  @[inline] def registrations (stakeAddress : String) : BF (Except BFApiError (List BFAccountRegistration)) :=
+    Blockfrost.accounts.registrations stakeAddress |>.getJsonM (α := List BFAccountRegistration)
+
+  -- GET /accounts/{stake_address}/withdrawals
+  @[inline] def withdrawals (stakeAddress : String) : BF (Except BFApiError (List BFAccountWithdrawal)) :=
+    Blockfrost.accounts.withdrawals stakeAddress |>.getJsonM (α := List BFAccountWithdrawal)
+
+  -- GET /accounts/{stake_address}/mirs
+  @[inline] def mirs (stakeAddress : String) : BF (Except BFApiError (List BFAccountMIR)) :=
+    Blockfrost.accounts.mirs stakeAddress |>.getJsonM (α := List BFAccountMIR)
+
+  -- GET /accounts/{stake_address}/addresses
+  @[inline] def addresses (stakeAddress : String) : BF (Except BFApiError (List BFAccountAddresses)) :=
+    Blockfrost.accounts.addresses stakeAddress |>.getJsonM (α := List BFAccountAddresses)
+
+  namespace addresses
+    -- GET /accounts/{stake_address}/addresses/assets
+    @[inline] def assets (stakeAddress : String) : BF (Except BFApiError (List BFValue)) :=
+      Blockfrost.accounts.addresses.assets stakeAddress |>.getJsonM (α := List BFValue)
+
+    -- GET /accounts/{stake_address}/addresses/total
+    @[inline] def total (stakeAddress : String) : BF (Except BFApiError BFAddressDetailed) :=
+      Blockfrost.accounts.addresses.total stakeAddress |>.getJsonM (α := BFAddressDetailed)
+  end addresses
+  -- GET /accounts/{stake_address}/utxos
+  @[inline] def utxos (stakeAddress : String) : BF (Except BFApiError (List BFAddressUtxos)) :=
+    Blockfrost.accounts.utxos stakeAddress |>.getJsonM (α := List BFAddressUtxos)
+
+  -- PAGINATION
+  -- namespace byStake
+  --   namespace history
+  --     /-- GET /accounts/{stake}/history with optional pagination filters. -/
+  --     def byStake (stake : String) (lp : ListParams := {}) : BF (List BFAccountHistory) := do
+  --       let p := Blockfrost.accounts.history stake |> Blockfrost.Typed.withParams lp
+  --       p.getJsonM (α := List BFAccountHistory)
+  --   end history
+  -- end byStake
+end accounts
+
+end Blockfrost.Typed
+</file>
+
+<file path="Blockfrost/Models/Epochs.lean">
+import Lean.Data.Json
+import Lean.Data.Json.FromToJson
+import Blockfrost.Models.Common
+import Blockfrost.Models.Derive
+
+namespace Blockfrost
+/-- GET /epochs/latest, /epochs/{epoch}(/next, /previous) -/
+structure BFEpoch where
+  epoch            : Nat
+  start_time       : Nat
+  end_time         : Nat
+  first_block_time : Nat
+  last_block_time  : Nat
+  block_count      : Nat
+  tx_count         : Nat
+  output           : String
+  fees             : String
+  active_stake?    : Option String := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFEpoch where
+
+/-- Cost models are language→cost-table maps; until you need a typed table,
+treat them as JSON blobs. -/
+
+structure BFCostModels where
+  plutus_v1? : Option Lean.Json := none
+  plutus_v2? : Option Lean.Json := none
+  plutus_v3? : Option Lean.Json := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+
+instance : PrettyToString BFCostModels where
+
+-- GET /epochs/latest/parameters, /epochs/{epoch}/parameters
+structure BFEpochParameters where
+  epoch        : Int
+  min_fee_a    : Int
+  min_fee_b    : Int
+  max_block_size : Int
+  max_tx_size    : Int
+  max_block_header_size : Int
+  key_deposit  : String
+  pool_deposit : String
+  e_max        : Int
+  n_opt        : Int
+  a0           : Float
+  rho          : Float
+  tau          : Float
+  decentralisation_param : Float
+  extra_entropy : Option String := none
+  protocol_major_ver : Int
+  protocol_minor_ver : Int
+
+  min_utxo? : Option String := none -- (deprecated)
+
+  min_pool_cost : String
+  nonce : String
+  cost_models : BFCostModels
+  cost_models_raw : Lean.Json
+  price_mem : Option Float := none
+  price_step : Option Float := none
+  max_tx_ex_mem : Option String := none
+  max_tx_ex_steps : Option String := none
+  max_block_ex_mem : Option String := none
+  max_block_ex_steps : Option String := none
+  max_val_size : Option String := none
+  collateral_percent : Option Int := none
+  max_collateral_inputs : Option Int := none
+  coins_per_utxo_size : Option String := none
+
+  coins_per_utxo_word? : Option String := none -- (deprecated)
+
+  pvt_motion_no_confidence : Option Float := none
+  pvt_committee_normal : Option Float := none
+  pvt_committee_no_confidence : Option Float := none
+  pvt_hard_fork_initiation : Option Float := none
+  dvt_committee_normal : Option Float := none
+  dvt_committee_no_confidence : Option Float := none
+  dvt_update_to_constitution : Option Float := none
+  dvt_hard_fork_initiation : Option Float := none
+  dvt_p_p_network_group : Option Float := none
+  dvt_p_p_economic_group : Option Float := none
+  dvt_p_p_technical_group : Option Float := none
+  dvt_p_p_gov_group : Option Float := none
+  dvt_treasury_withdrawal : Option Float := none
+  committee_min_size : Option String := none
+  committee_max_term_length : Option String := none
+  gov_action_lifetime : Option String := none
+  gov_action_deposit : Option String := none
+  drep_deposit : Option String := none
+  drep_activity : Option String := none
+  -- pvt_pp_security_group : Nat -- DEPRECATED := none
+  pvt_p_p_security_group : Option Float := none
+  min_fee_ref_script_cost_per_byte : Option Float := none
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFEpochParameters where
+
+-- GET /epochs/{number}/stakes
+structure BFEpochStake where
+  stake_address : String
+  pool_id       : String
+  amount        : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFEpochStake where
+
+-- GET /epochs/{number}/stakes/{pool_id} /epochs/{number}/blocks(/{pool_id})
+structure BFEpochStakeAmount where
+  stake_address : String
+  amount       : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFEpochStakeAmount where
+
+-- GET /epochs/{number}/blocks
+abbrev BFEpochBlock := String
+end Blockfrost
+</file>
+
+<file path="Blockfrost/Typed/Addresses.lean">
+import Blockfrost.Env
+import Blockfrost.Path
+import Blockfrost.Endpoints.Endpoints
+import Blockfrost.Models.Models
+import Blockfrost.Typed.Common
+
+namespace Blockfrost.Typed
+open Blockfrost
+open Blockfrost.Models
+
+namespace addresses
+  -- GET /addresses/{address}
+  def byAddress (addr : String) : BF (Except BFApiError BFAddressInfo) :=
+    Blockfrost.addresses.byAddress addr |>.getJsonM (α := BFAddressInfo)
+
+  -- GET /addresses/{address}/extended
+  def extended (addr : String) : BF (Except BFApiError BFAddressExtended) :=
+    Blockfrost.addresses.extended addr |>.getJsonM (α := BFAddressExtended)
+
+  -- GET /addresses/{address}/total
+  def total (addr : String) : BF (Except BFApiError BFAddressTotal) :=
+    Blockfrost.addresses.total addr |>.getJsonM (α := BFAddressTotal)
+
+  -- GET /addresses/{address}/utxos
+  def utxos (addr : String) : BF (Except BFApiError (List BFUtxo)) :=
+    Blockfrost.addresses.utxos addr |>.getJsonM (α := List BFUtxo)
+
+  namespace utxos
+    -- GET /addresses/{address}/utxos/{asset}
+    def byAsset (addr : String) (asset : String) : BF (Except BFApiError (List BFUtxo)) :=
+      Blockfrost.addresses.utxos.byAsset addr asset |>.getJsonM (α := List BFUtxo)
+  end utxos
+
+  -- GET /addresses/{address}/txs (deprecated)
+  def txs (addr : String) : BF (Except BFApiError (List BFAddressTxs)) :=
+    Blockfrost.addresses.txs addr |>.getJsonM (α := List BFAddressTxs)
+
+  -- GET /addresses/{address}/transactions
+  def transactions (addr : String) : BF (Except BFApiError (List BFTransaction)) :=
+    Blockfrost.addresses.transactions addr |>.getJsonM (α := List BFTransaction)
+end addresses
+
+end Blockfrost.Typed
+</file>
+
+<file path="Main.lean">
+-- Main.lean (Refactored)
+import Tests.TestSuite
+
+def main (args : List String) : IO Unit := do
+  match args with
+  | [] =>
+    -- Run all tests by default
+    runTests
+  | ["--help"] | ["-h"] =>
+    IO.println "Blockfrost API Test Suite"
+    IO.println "Usage:"
+    IO.println "  ./demo                    # Run all tests"
+    IO.println "  ./demo --help             # Show this help"
+    IO.println "  ./demo accounts           # Run account-related tests"
+    IO.println "  ./demo addresses          # Run address-related tests"
+    IO.println "  ./demo assets             # Run asset-related tests"
+    IO.println "  ./demo blocks             # Run block-related tests"
+    IO.println "  ./demo epochs             # Run epoch-related tests"
+    IO.println "  ./demo governance         # Run governance-related tests"
+    IO.println "  ./demo health             # Run health tests only"
+    IO.println "  ./demo ledgers            # Run ledger tests only"
+    IO.println "  ./demo mempool            # Run mempool tests only"
+    IO.println "  ./demo metadata           # Run metadata tests only"
+    IO.println "  ./demo metrics            # Run metrics tests only"
+    IO.println "  ./demo network            # Run network tests only"
+    IO.println "  ./demo pools              # Run pool tests only"
+    IO.println "  ./demo root               # Run root tests only"
+    IO.println "  ./demo scripts            # Run script tests only"
+    IO.println "  ./demo transactions       # Run transaction tests only"
+    IO.println ""
+    IO.println "Environment variables:"
+    IO.println "  BLOCKFROST_PROJECT_ID    # Required: Your Blockfrost project ID"
+  | [suite] =>
+    IO.println s!"Unknown test suite: {suite}"
+    IO.println "Run './demo --help' for available options"
+  | _ =>
+    IO.println "Too many arguments. Run './demo --help' for usage."
+</file>
+
+<file path="README.md">
+# BlockFrost-lean
+[![CI](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yaml/badge.svg)](https://github.com/RSoulatIOHK/blockfrost-lean4/actions/workflows/ci-macos.yayml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)]()
+[![Lean 4](https://img.shields.io/badge/Lean-4-blue.svg)](https://leanprover.github.io/)
+
+> [!WARNING]
+> This SDK is currently in development and NOT ready for production use.
+> 
+> - Not extensively tested
+> - API may change - Breaking changes may occur
+> - No warranty - Use at your own risk
+
+A Lean SDK for [Blockfrost API](https://blockfrost.io/).
+
+This SDK provides a typed interface to the Blockfrost API.
+
+> [!NOTE]
+> This currently assumes that you have installed libcurl with homebrew
+
+## Implemented Features
+
+Currently, the following API sections are implemented:
+
+- [x]   **Health**
+- [x]   **Metrics**
+- [x]   **Root**
+- [x]   **Accounts**
+- [x]   **Addresses**
+- [x]   **Assets**
+- [x]   **Blocks**
+- [x]   **Epochs**
+- [x]   **Ledger**
+- [x]   **Mempool**
+- [x]   **Metadata**
+- [x]   **Network**
+- [x]   **Pools**
+- [x]   **Scripts**
+- [x]   **Transactions**
+
+Except the POST methods, which are not yet implemented.
+
+## Missing Features & Contributing
+
+This library is still under development, and many features of the Blockfrost API are not yet implemented. We welcome contributions from the community to help expand the library's coverage.
+
+If you are interested in contributing, please feel free to open a pull request. Some of the missing features include:
+
+*   Cardano Utilities
+*   IPFS
+*   POST API
+*   Generation of everything from the OpenAPI spec
+
+Your contributions are greatly appreciated!
+</file>
+
+</files>

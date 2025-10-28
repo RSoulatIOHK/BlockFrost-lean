@@ -36,3 +36,12 @@ lean_exe «blockfrost-test» {
     "-Wl,-rpath,/opt/homebrew/opt/curl/lib"
   ]
 }
+
+lean_exe «chain-scanner-forward» {
+  root := `Examples.ChainScannerForward
+  moreLinkArgs := #[
+    "-L", "/opt/homebrew/opt/curl/lib",
+    "-lcurl",
+    "-Wl,-rpath,/opt/homebrew/opt/curl/lib"
+  ]
+}

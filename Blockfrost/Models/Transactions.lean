@@ -161,7 +161,7 @@ structure BFTxRedeemer where
   tx_index : Int
   purpose : String -- TODO: enum?
   script_hash : String
-  reader_data_hash : String
+  redeemer_data_hash : String
   datum_hash? : Option String := none -- (deprecated)
   unit_mem : String
   unit_steps : String
