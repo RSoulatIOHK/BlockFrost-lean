@@ -59,7 +59,7 @@ def exampleTransactionInfo (txHash : String) : BF Unit := do
   match txUtxos with
   | .error _ => IO.println "  No UTXO info available"
   | .ok utxoInfo =>
-    IO.println s!"  Inputs: {utxoInfo.inputs.length}, Outputs: {utxoInfo.outputs.length}"
+    IO.println s!"  Inputs: {utxoInfo.inputs.size}, Outputs: {utxoInfo.outputs.size}"
 
 -- Example: Search for pools
 def examplePools : BF Unit := do
@@ -68,7 +68,7 @@ def examplePools : BF Unit := do
   match pools with
   | .error apiError => IO.println s!"❌ {apiError.error}"
   | .ok poolList =>
-    IO.println s!"✅ Found {poolList.length} pools"
+    IO.println s!"✅ Found {poolList.size} pools"
     for pool in poolList.take 5 do -- Show first 5
       IO.println s!"  Pool: {pool}"
 

@@ -1,5 +1,3 @@
 /.lake
 .venv
 /.vscode
-/all_scripts/
-/scripts-out/
