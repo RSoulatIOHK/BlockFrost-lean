@@ -64,8 +64,8 @@ namespace txs
     Blockfrost.txs.cbor h |>.getJsonM (α := BFTxCbor)
 
   -- POST /txs/submit
-  -- def submit : BF (Except BFApiError BFTxSubmitResponse) :=
-  --   Blockfrost.txs.submit.postJsonM (α := BFTxSubmitResponse)
+  def submit (cborTx : String) : BF (Except BFApiError BFTxSubmitResponse) :=
+    Blockfrost.txs.submit.postJsonM (α := BFTxSubmitResponse) cborTx
 end txs
 
 end Blockfrost.Typed

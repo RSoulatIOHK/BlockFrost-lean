@@ -96,4 +96,29 @@ def getJsonM [Lean.FromJson α] (segs : Array String) (qs : Array (String × Str
       | .ok x       => return .ok x
       | .error derr => throw <| BFError.decode derr body
 
+def postStringM (segs : Array String) (reqBody : String) (qs : Array (String × String) := #[]) : BF String := do
+  let env ← read
+  let url := renderUrl env.base segs qs
+  let headers := authHeaders env ++ #[("Content-Type", "application/cbor")]
+
+  try
+    Curl.curlPostWithHeaders url headers reqBody
+  catch e : IO.Error =>
+    throw <| BFError.network e.toString
+
+def postJsonM [Lean.FromJson α] (segs : Array String) (reqBody : String) (qs : Array (String × String) := #[]) : BF (Except Blockfrost.Models.BFApiError α) := do
+  let body ← postStringM segs reqBody qs
+
+  -- Try to decode as API error first
+  if let some apiError := decodeApiError body then
+    return .error apiError
+  else
+    -- Parse as success type
+    match Lean.Json.parse body with
+    | .error pe => throw <| BFError.parse pe body
+    | .ok j =>
+      match Lean.fromJson? (α := α) j with
+      | .ok x       => return .ok x
+      | .error derr => throw <| BFError.decode derr body
+
 end Blockfrost

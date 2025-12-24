@@ -182,5 +182,9 @@ deriving Repr, Lean.FromJson, Lean.ToJson
 instance : PrettyToString BFTxCbor where
 
 -- POST /txs/submit
+structure BFTxSubmitResponse where
+  hash : String
+deriving Repr, Lean.FromJson, Lean.ToJson
+instance : PrettyToString BFTxSubmitResponse where
 
 end Blockfrost

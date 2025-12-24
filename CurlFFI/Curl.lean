@@ -14,4 +14,14 @@ opaque curlGetToFileWithHeaders
   (path : @& String)
   : IO Unit
 
+@[extern "lcurl_post"]
+opaque curlPost (url : @& String) (body : @& String) : IO String
+
+@[extern "lcurl_post_with_headers"]
+opaque curlPostWithHeaders
+  (url : @& String)
+  (headers : @& Array (String × String))
+  (body : @& String)
+  : IO String
+
 end Curl

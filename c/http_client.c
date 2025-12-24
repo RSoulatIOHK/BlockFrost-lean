@@ -224,3 +224,109 @@ LEAN_EXPORT lean_obj_res lcurl_get_to_file_with_headers(lean_obj_arg url, lean_o
     curl_global_cleanup();
     return lean_io_result_mk_ok(lean_box(0)); /* Unit */
 }
+
+/* -------- plain POST: IO String -------- */
+LEAN_EXPORT lean_obj_res lcurl_post(lean_obj_arg url, lean_obj_arg body, lean_obj_arg w) {
+    const char* c_url = lean_string_cstr(url);
+    const char* c_body = lean_string_cstr(body);
+    CURLcode cc = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (cc != CURLE_OK) {
+        return lean_io_result_mk_error(lean_mk_string(curl_easy_strerror(cc)));
+    }
+
+    CURL* h = curl_easy_init();
+    if (!h) {
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("curl_easy_init failed"));
+    }
+
+    buf_t b; buf_init(&b);
+    if (!b.data) {
+        curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory"));
+    }
+
+    curl_easy_setopt(h, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, "");
+    curl_easy_setopt(h, CURLOPT_URL, c_url);
+    curl_easy_setopt(h, CURLOPT_POST, 1L);
+    curl_easy_setopt(h, CURLOPT_POSTFIELDS, c_body);
+    curl_easy_setopt(h, CURLOPT_POSTFIELDSIZE, strlen(c_body));
+    curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb);
+    curl_easy_setopt(h, CURLOPT_WRITEDATA, &b);
+    curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(h, CURLOPT_USERAGENT, "lean-curl/1.0");
+    curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(h, CURLOPT_TIMEOUT, 30L);
+
+    cc = curl_easy_perform(h);
+    if (cc != CURLE_OK) {
+        lean_obj_res err = lean_mk_string(curl_easy_strerror(cc));
+        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(err);
+    }
+
+    long status = 0;
+    curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
+
+    lean_obj_res s = lean_mk_string(b.data);
+    free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+    return lean_io_result_mk_ok(s);
+}
+
+/* -------- POST with headers: IO String -------- */
+LEAN_EXPORT lean_obj_res lcurl_post_with_headers(lean_obj_arg url, lean_obj_arg headers, lean_obj_arg body, lean_obj_arg w) {
+    const char* c_url = lean_string_cstr(url);
+    const char* c_body = lean_string_cstr(body);
+    CURLcode cc = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (cc != CURLE_OK) {
+        return lean_io_result_mk_error(lean_mk_string(curl_easy_strerror(cc)));
+    }
+
+    CURL* h = curl_easy_init();
+    if (!h) {
+        curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("curl_easy_init failed"));
+    }
+
+    buf_t b; buf_init(&b);
+    if (!b.data) {
+        curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory"));
+    }
+
+    struct curl_slist* hdr_list = build_headers_from_array(headers);
+    if (headers != lean_box(0) && hdr_list == NULL && lean_array_size(headers) > 0) {
+        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(lean_mk_string("out of memory building headers"));
+    }
+
+    curl_easy_setopt(h, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(h, CURLOPT_ACCEPT_ENCODING, "");
+    curl_easy_setopt(h, CURLOPT_URL, c_url);
+    curl_easy_setopt(h, CURLOPT_HTTPHEADER, hdr_list);
+    curl_easy_setopt(h, CURLOPT_POST, 1L);
+    curl_easy_setopt(h, CURLOPT_POSTFIELDS, c_body);
+    curl_easy_setopt(h, CURLOPT_POSTFIELDSIZE, strlen(c_body));
+    curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb);
+    curl_easy_setopt(h, CURLOPT_WRITEDATA, &b);
+    curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(h, CURLOPT_USERAGENT, "lean-curl/1.0");
+    curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT, 10L);
+    curl_easy_setopt(h, CURLOPT_TIMEOUT, 30L);
+
+    cc = curl_easy_perform(h);
+    if (cc != CURLE_OK) {
+        lean_obj_res err = lean_mk_string(curl_easy_strerror(cc));
+        if (hdr_list) curl_slist_free_all(hdr_list);
+        free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+        return lean_io_result_mk_error(err);
+    }
+
+    long status = 0;
+    curl_easy_getinfo(h, CURLINFO_RESPONSE_CODE, &status);
+    lean_obj_res s = lean_mk_string(b.data);
+    if (hdr_list) curl_slist_free_all(hdr_list);
+    free(b.data); curl_easy_cleanup(h); curl_global_cleanup();
+    return lean_io_result_mk_ok(s);
+}

@@ -19,4 +19,10 @@ def Path.getStringM (p : Path) : BF String :=
 def Path.getJsonM [Lean.FromJson α] (p : Path) : BF (Except Blockfrost.Models.BFApiError α) :=
   Blockfrost.getJsonM (α := α) p.segs p.qs
 
+def Path.postStringM (p : Path) (body : String) : BF String :=
+  Blockfrost.postStringM p.segs body p.qs
+
+def Path.postJsonM [Lean.FromJson α] (p : Path) (body : String) : BF (Except Blockfrost.Models.BFApiError α) :=
+  Blockfrost.postJsonM (α := α) p.segs body p.qs
+
 end Blockfrost
