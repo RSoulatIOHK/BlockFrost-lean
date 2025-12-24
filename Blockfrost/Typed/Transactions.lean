@@ -63,9 +63,13 @@ namespace txs
   def cbor (h : String) : BF (Except BFApiError BFTxCbor) :=
     Blockfrost.txs.cbor h |>.getJsonM (α := BFTxCbor)
 
-  -- POST /txs/submit
-  def submit (cborTx : String) : BF (Except BFApiError BFTxSubmitResponse) :=
-    Blockfrost.txs.submit.postJsonM (α := BFTxSubmitResponse) cborTx
 end txs
+
+-- Separate namespace for tx (singular) endpoints
+namespace tx
+  -- POST /tx/submit
+  def submit (cborTx : String) : BF (Except BFApiError BFTxSubmitResponse) :=
+    Blockfrost.tx.submit.postJsonM (α := BFTxSubmitResponse) cborTx
+end tx
 
 end Blockfrost.Typed

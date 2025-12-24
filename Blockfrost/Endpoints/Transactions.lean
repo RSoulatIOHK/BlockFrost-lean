@@ -50,7 +50,14 @@ namespace txs
   -- GET /txs/{hash}/cbor
   @[inline] def cbor (h : String) : Path := byHash h |>.seg "cbor"
 
-  -- POST /txs/submit
+end txs
+
+-- Separate namespace for tx (singular) endpoints
+namespace tx
+  -- root for tx (singular) endpoints
+  private def root : Path := Blockfrost.root.seg "tx"
+
+  -- POST /tx/submit
   @[inline] def submit : Path := root.seg "submit"
 
-end txs
+end tx
